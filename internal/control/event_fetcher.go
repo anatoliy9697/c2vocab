@@ -22,7 +22,7 @@ type EventFetcher struct {
 	TgBotUpdsTimeout      int
 	MaxEventHandlers      int
 	WaitForHandlerTimeout int // ms
-	Repos                 *Repos
+	Repos                 Repos
 }
 
 func (ef EventFetcher) Run(ctx context.Context, done chan struct{}) {
@@ -58,7 +58,7 @@ loop:
 					HandlerCode: handlerCode,
 					TgBotAPI:    ef.TgBotAPI,
 					Repos:       ef.Repos,
-				}.Run(handlerDone, &upd)
+				}.Run(handlerDone, upd)
 			} else {
 				time.Sleep(time.Duration(ef.WaitForHandlerTimeout) * time.Millisecond)
 			}

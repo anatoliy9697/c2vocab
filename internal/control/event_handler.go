@@ -11,10 +11,10 @@ import (
 type EventHandler struct {
 	HandlerCode string
 	TgBotAPI    *tgbotapi.BotAPI
-	Repos       *Repos
+	Repos       Repos
 }
 
-func (eh EventHandler) Run(done chan string, upd *tgbotapi.Update) {
+func (eh EventHandler) Run(done chan string, upd tgbotapi.Update) {
 	defer func() { done <- eh.HandlerCode }()
 	var err error
 	defer func() {
@@ -38,15 +38,12 @@ func (eh EventHandler) Run(done chan string, upd *tgbotapi.Update) {
 	var chat *tgchatPkg.TgChat
 	if newUser {
 		state, _ = eh.Repos.TgChat.StartState()
-		chat = tgchatPkg.MapToInner(upd.FromChat())
-		chat.StateCode = state.Code
-		chat.UserId = usr.Id
+		chat = tgchatPkg.NewTgChat(upd.FromChat(), usr.Id, state.Code)
 		err = eh.Repos.TgChat.SaveNew(chat)
 		if err != nil {
 			return
 		}
 	} else {
-		//		получить текущее состояние чата с пользователем
 		chat, err = eh.Repos.TgChat.TgChatByUserId(usr.Id)
 		if err != nil {
 			return
@@ -55,6 +52,17 @@ func (eh EventHandler) Run(done chan string, upd *tgbotapi.Update) {
 		if err != nil {
 			return
 		}
+	}
+
+	if upd.Message == nil {
+		return
+	}
+
+	msg := upd.Message
+
+	err = state.ValidateMessage(msg)
+	if err != nil {
+		return
 	}
 
 	//	Получить список доступных для текущего состояния действий

@@ -42,7 +42,7 @@ func main() {
 		TgBotUpdsTimeout:      30,
 		MaxEventHandlers:      10,
 		WaitForHandlerTimeout: 100,
-		Repos: &control.Repos{
+		Repos: control.Repos{
 			User:   usrRepo.Init(mainCtx, pgPool),
 			TgChat: tgchatRepo.Init(mainCtx, pgPool),
 		},
@@ -51,28 +51,10 @@ func main() {
 	// Keeping alive
 	<-mainCtx.Done()
 
-	// TODO: Сделать адекватное логирование
-	fmt.Println("Производится grasefull shutdown. Ждем завершения дочерних горутин")
+	fmt.Println("Производится grasefull shutdown. Ждем завершения дочерних горутин") // TODO: Сделать адекватное логирование
 
 	// Waiting for event fetcher completion
 	<-efDone
 
-	// TODO: Сделать адекватное логирование
-	fmt.Println("Все горутингы завершили свою работу")
+	fmt.Println("Все горутингы завершили свою работу") // TODO: Сделать адекватное логирование
 }
-
-/*
-{
-		TgBot:                 tgBot,
-		TgBotUpdsOffset:       0,
-		TgBotUpdsTimeout:      30,
-		MaxEventHandlers:      10,
-		WaitForHandlerTimeout: 100,
-		Model: struct {
-			UserRepo   usrRepo.Repo
-			TgChatRepo tgchatRepo.Repo
-		}{
-			UserRepo:   usrRepo.Init(mainCtx, pgPool),
-			TgChatRepo: tgchatRepo.Init(mainCtx, pgPool),
-		},
-*/

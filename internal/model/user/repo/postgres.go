@@ -18,7 +18,7 @@ func initPGRepo(c context.Context, p *pgxpool.Pool) *pgRepo {
 
 // Saving/updating user and returning
 // is user new (true) or already exists (false) and error
-func (r *pgRepo) Set(u *user.User) (newUser bool, err error) {
+func (r pgRepo) Set(u *user.User) (newUser bool, err error) {
 	var userExists bool
 
 	if userExists, err = r.IsExists(u); err == nil {
@@ -32,7 +32,7 @@ func (r *pgRepo) Set(u *user.User) (newUser bool, err error) {
 	return !userExists, err
 }
 
-func (r *pgRepo) IsExists(u *user.User) (bool, error) {
+func (r pgRepo) IsExists(u *user.User) (bool, error) {
 	conn, err := r.pool.Acquire(r.ctx)
 	if err != nil {
 		return false, err
@@ -57,7 +57,7 @@ func (r *pgRepo) IsExists(u *user.User) (bool, error) {
 	return false, nil
 }
 
-func (r *pgRepo) SaveNew(u *user.User) error {
+func (r pgRepo) SaveNew(u *user.User) error {
 	conn, err := r.pool.Acquire(r.ctx)
 	if err != nil {
 		return err
@@ -87,7 +87,7 @@ func (r *pgRepo) SaveNew(u *user.User) error {
 	return nil
 }
 
-func (r *pgRepo) Update(u *user.User) error {
+func (r pgRepo) Update(u *user.User) error {
 	conn, err := r.pool.Acquire(r.ctx)
 	if err != nil {
 		return err

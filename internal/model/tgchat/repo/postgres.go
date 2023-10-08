@@ -16,7 +16,7 @@ func initPGRepo(c context.Context, p *pgxpool.Pool) *pgRepo {
 	return &pgRepo{c, p}
 }
 
-func (r *pgRepo) SaveNew(tc *tgchat.TgChat) error {
+func (r pgRepo) SaveNew(tc *tgchat.TgChat) error {
 	conn, err := r.p.Acquire(r.c)
 	if err != nil {
 		return err
@@ -39,7 +39,7 @@ func (r *pgRepo) SaveNew(tc *tgchat.TgChat) error {
 	return nil
 }
 
-func (r *pgRepo) TgChatByUserId(usrId int32) (*tgchat.TgChat, error) {
+func (r pgRepo) TgChatByUserId(usrId int32) (*tgchat.TgChat, error) {
 	conn, err := r.p.Acquire(r.c)
 	if err != nil {
 		return nil, err
