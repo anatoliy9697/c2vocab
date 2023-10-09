@@ -3,7 +3,7 @@ package control
 import (
 	"fmt"
 
-	tgchatPkg "github.com/anatoliy9697/c2vocab/internal/model/tgchat"
+	tcPkg "github.com/anatoliy9697/c2vocab/internal/model/tgchat"
 	usrPkg "github.com/anatoliy9697/c2vocab/internal/model/user"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -23,52 +23,31 @@ func (eh EventHandler) Run(done chan string, upd tgbotapi.Update) {
 		}
 	}()
 
-	outerUsr := upd.SentFrom()
-	usr := usrPkg.MapToInner(outerUsr)
-
-	// User checking and saving/updating
-	var newUser bool
-	newUser, err = eh.Repos.User.Set(usr)
+	// Getting inner user
+	var usr *usrPkg.User
+	usr, err = eh.Repos.User.ToInner(upd.SentFrom())
 	if err != nil {
 		return
 	}
 
-	// Getting chat and state
-	var state *tgchatPkg.State
-	var chat *tgchatPkg.TgChat
-	if newUser {
-		state, _ = eh.Repos.TgChat.StartState()
-		chat = tgchatPkg.NewTgChat(upd.FromChat(), usr.Id, state.Code)
-		err = eh.Repos.TgChat.SaveNew(chat)
-		if err != nil {
-			return
-		}
-	} else {
-		chat, err = eh.Repos.TgChat.TgChatByUserId(usr.Id)
-		if err != nil {
-			return
-		}
-		state, err = eh.Repos.TgChat.StateByCode(chat.StateCode)
-		if err != nil {
-			return
-		}
+	// Getting inner TgChat
+	var tgChat *tcPkg.TgChat
+	tgChat, err = eh.Repos.TgChat.ToInnerTgChat(usr, upd.FromChat())
+	if err != nil {
+		return
 	}
 
+	// Ignore non-message event
 	if upd.Message == nil {
 		return
 	}
 
 	msg := upd.Message
 
-	err = state.ValidateMessage(msg)
+	err = tgChat.ValidateMessage(msg)
 	if err != nil {
 		return
 	}
-
-	//	Получить список доступных для текущего состояния действий
-
-	//	Если выполненное пользователем действие не соответствует доступным, то
-	//		сформировать сообщение о недопустимом действии, отправить пользователю и завершить свое выполнение
 
 	//	Отразить требуемые командой измения в польз. данных
 

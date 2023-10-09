@@ -3,7 +3,8 @@ package repo
 import (
 	"context"
 
-	"github.com/anatoliy9697/c2vocab/internal/model/user"
+	usrPkg "github.com/anatoliy9697/c2vocab/internal/model/user"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -16,11 +17,10 @@ func initPGRepo(c context.Context, p *pgxpool.Pool) *pgRepo {
 	return &pgRepo{c, p}
 }
 
-// Saving/updating user and returning
-// is user new (true) or already exists (false) and error
-func (r pgRepo) Set(u *user.User) (newUser bool, err error) {
-	var userExists bool
+func (r pgRepo) ToInner(outerU *tgbotapi.User) (u *usrPkg.User, err error) {
+	u = usrPkg.MapToInner(outerU)
 
+	var userExists bool
 	if userExists, err = r.IsExists(u); err == nil {
 		if userExists {
 			err = r.Update(u)
@@ -29,10 +29,10 @@ func (r pgRepo) Set(u *user.User) (newUser bool, err error) {
 		}
 	}
 
-	return !userExists, err
+	return u, err
 }
 
-func (r pgRepo) IsExists(u *user.User) (bool, error) {
+func (r pgRepo) IsExists(u *usrPkg.User) (bool, error) {
 	conn, err := r.pool.Acquire(r.ctx)
 	if err != nil {
 		return false, err
@@ -57,7 +57,7 @@ func (r pgRepo) IsExists(u *user.User) (bool, error) {
 	return false, nil
 }
 
-func (r pgRepo) SaveNew(u *user.User) error {
+func (r pgRepo) SaveNew(u *usrPkg.User) error {
 	conn, err := r.pool.Acquire(r.ctx)
 	if err != nil {
 		return err
@@ -87,7 +87,7 @@ func (r pgRepo) SaveNew(u *user.User) error {
 	return nil
 }
 
-func (r pgRepo) Update(u *user.User) error {
+func (r pgRepo) Update(u *usrPkg.User) error {
 	conn, err := r.pool.Acquire(r.ctx)
 	if err != nil {
 		return err

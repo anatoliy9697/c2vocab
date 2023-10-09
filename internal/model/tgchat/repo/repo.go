@@ -3,15 +3,18 @@ package repo
 import (
 	"context"
 
-	"github.com/anatoliy9697/c2vocab/internal/model/tgchat"
+	tcPkg "github.com/anatoliy9697/c2vocab/internal/model/tgchat"
+	usrPkg "github.com/anatoliy9697/c2vocab/internal/model/user"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Repo interface {
-	SaveNew(u *tgchat.TgChat) error
-	StartState() (*tgchat.State, error)
-	TgChatByUserId(int32) (*tgchat.TgChat, error)
-	StateByCode(string) (*tgchat.State, error)
+	ToInnerTgChat(*usrPkg.User, *tgbotapi.Chat) (*tcPkg.TgChat, error)
+	SaveNewTgChat(*tcPkg.TgChat) error
+	StartState() (*tcPkg.State, error)
+	TgChatByUserId(int32) (*tcPkg.TgChat, error)
+	StateByCode(string) (*tcPkg.State, error)
 }
 
 func Init(c context.Context, p *pgxpool.Pool) Repo {

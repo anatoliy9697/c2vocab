@@ -2,8 +2,12 @@ package repo
 
 import (
 	"context"
+	"errors"
 
-	"github.com/anatoliy9697/c2vocab/internal/model/tgchat"
+	tcPkg "github.com/anatoliy9697/c2vocab/internal/model/tgchat"
+	usrPkg "github.com/anatoliy9697/c2vocab/internal/model/user"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -16,7 +20,17 @@ func initPGRepo(c context.Context, p *pgxpool.Pool) *pgRepo {
 	return &pgRepo{c, p}
 }
 
-func (r pgRepo) SaveNew(tc *tgchat.TgChat) error {
+func (r pgRepo) ToInnerTgChat(u *usrPkg.User, outerChat *tgbotapi.Chat) (tc *tcPkg.TgChat, err error) {
+	if tc, err = r.TgChatByUserId(u.Id); err == nil && tc == nil {
+		state, _ := r.StartState()
+		tc = tcPkg.NewTgChat(outerChat, u.Id, state)
+		err = r.SaveNewTgChat(tc)
+	}
+
+	return tc, err
+}
+
+func (r pgRepo) SaveNewTgChat(tc *tcPkg.TgChat) error {
 	conn, err := r.p.Acquire(r.c)
 	if err != nil {
 		return err
@@ -30,7 +44,7 @@ func (r pgRepo) SaveNew(tc *tgchat.TgChat) error {
 	_, err = conn.Exec(r.c, sql,
 		tc.TgId,
 		tc.UserId,
-		tc.StateCode,
+		tc.State.Code,
 	)
 	if err != nil {
 		return err
@@ -39,7 +53,7 @@ func (r pgRepo) SaveNew(tc *tgchat.TgChat) error {
 	return nil
 }
 
-func (r pgRepo) TgChatByUserId(usrId int32) (*tgchat.TgChat, error) {
+func (r pgRepo) TgChatByUserId(usrId int32) (*tcPkg.TgChat, error) {
 	conn, err := r.p.Acquire(r.c)
 	if err != nil {
 		return nil, err
@@ -53,9 +67,17 @@ func (r pgRepo) TgChatByUserId(usrId int32) (*tgchat.TgChat, error) {
 		WHERE user_id = $1
 	`
 	err = conn.QueryRow(r.c, sql, usrId).Scan(&tgId, &stateCode)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	var state *tcPkg.State
+	state, err = r.StateByCode(stateCode)
 	if err != nil {
 		return nil, err
 	}
 
-	return &tgchat.TgChat{TgId: tgId, UserId: usrId, StateCode: stateCode}, nil
+	return &tcPkg.TgChat{TgId: tgId, UserId: usrId, State: state}, nil
 }

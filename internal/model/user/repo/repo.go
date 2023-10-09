@@ -3,15 +3,16 @@ package repo
 import (
 	"context"
 
-	"github.com/anatoliy9697/c2vocab/internal/model/user"
+	usrPkg "github.com/anatoliy9697/c2vocab/internal/model/user"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Repo interface {
-	Set(u *user.User) (bool, error)
-	IsExists(u *user.User) (bool, error)
-	SaveNew(u *user.User) error
-	Update(u *user.User) error
+	ToInner(*tgbotapi.User) (*usrPkg.User, error)
+	IsExists(*usrPkg.User) (bool, error)
+	SaveNew(*usrPkg.User) error
+	Update(*usrPkg.User) error
 }
 
 func Init(c context.Context, p *pgxpool.Pool) Repo {
