@@ -5,10 +5,11 @@ import (
 )
 
 var cmds = map[string]*tgchat.Cmd{
-	"start": {Code: "start", DestState: states["main_menu"]},
+	"start":    {Code: "start", DestState: states["main_menu"]},
+	"to_start": {Code: "to_start", DestState: states["start"]},
 }
 
 var states = map[string]*tgchat.State{
-	"start":     {Code: "start", Msg: "", MsgHdr: "", MsgFtr: "", AvailCmdCodes: []string{"start"}},
-	"main_menu": {Code: "main_menu", Msg: "Вы находитесь в главном меню", MsgHdr: "Шапка главного меню", MsgFtr: "Подвал главного меню"},
+	"start":     {Code: "start", MsgHdr: "Стартовый экран", Msg: "Доступные команды: /start", AvailCmdCodes: []string{"start"}},
+	"main_menu": {Code: "main_menu", MsgHdr: "Главное меню", Msg: "Доступные команды: /to_start", AvailCmdCodes: []string{"to_start"}},
 }

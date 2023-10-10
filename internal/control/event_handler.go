@@ -25,14 +25,14 @@ func (eh EventHandler) Run(done chan string, upd tgbotapi.Update) {
 
 	// Getting inner user
 	var usr *usrPkg.User
-	usr, err = eh.Repos.User.ToInner(upd.SentFrom())
+	usr, err = eh.toInnerUser(upd.SentFrom())
 	if err != nil {
 		return
 	}
 
 	// Getting inner TgChat
 	var tgChat *tcPkg.TgChat
-	tgChat, err = eh.Repos.TgChat.ToInnerTgChat(usr, upd.FromChat())
+	tgChat, err = eh.toInnerTgChat(usr, upd.FromChat())
 	if err != nil {
 		return
 	}
@@ -44,20 +44,80 @@ func (eh EventHandler) Run(done chan string, upd tgbotapi.Update) {
 
 	msg := upd.Message
 
-	err = tgChat.ValidateMessage(msg)
+	err = eh.processMessage(tgChat, msg)
 	if err != nil {
 		return
 	}
 
+	err = eh.sendReplyMessage(tgChat, msg)
+	if err != nil {
+		return
+	}
+}
+
+func (eh EventHandler) toInnerUser(outerU *tgbotapi.User) (u *usrPkg.User, err error) {
+	u = usrPkg.MapToInner(outerU)
+
+	var userExists bool
+	if userExists, err = eh.Repos.User.IsExists(u); err == nil {
+		if userExists {
+			err = eh.Repos.User.Update(u)
+		} else {
+			err = eh.Repos.User.SaveNew(u)
+		}
+	}
+
+	return u, err
+}
+
+func (eh EventHandler) toInnerTgChat(u *usrPkg.User, outerChat *tgbotapi.Chat) (tc *tcPkg.TgChat, err error) {
+	if tc, err = eh.Repos.TgChat.TgChatByUserId(u.Id); err == nil && tc == nil {
+		state, _ := eh.Repos.TgChat.StartState()
+		tc = tcPkg.NewTgChat(outerChat, u.Id, state)
+		err = eh.Repos.TgChat.SaveNewTgChat(tc)
+	}
+
+	return tc, err
+}
+
+func (eh EventHandler) processMessage(tc *tcPkg.TgChat, msg *tgbotapi.Message) error {
+	// Message validation
+	var err error
+	err = tc.ValidateMessage(msg)
+	if err != nil {
+		return err
+	}
+
 	//	Отразить требуемые командой измения в польз. данных
 
-	//	Сменить состояние чата
-
-	//	Сформировать сообщение пользователю согласно текущему состоянию и отправить его в чат
-
-	if upd.Message != nil {
-		msg := tgbotapi.NewMessage(upd.Message.Chat.ID, upd.Message.Text)
-		msg.ReplyToMessageID = upd.Message.MessageID
-		eh.TgBotAPI.Send(msg)
+	// Setting tgChat next state
+	var cmd *tcPkg.Cmd
+	cmd, err = eh.Repos.TgChat.CmdByCode(msg.CommandWithAt())
+	if err != nil {
+		return err
 	}
+	tc.SetState(cmd.DestState)
+	err = eh.Repos.TgChat.UpdateTgChatState(tc)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (eh EventHandler) sendReplyMessage(tc *tcPkg.TgChat, iMsg *tgbotapi.Message) error {
+	oMsgText := tc.State.Msg
+	if tc.State.MsgHdr != "" {
+		oMsgText = tc.State.MsgHdr + "\n\n" + oMsgText
+	}
+	if tc.State.MsgFtr != "" {
+		oMsgText += "\n\n" + tc.State.MsgFtr
+	}
+
+	msg := tgbotapi.NewMessage(iMsg.Chat.ID, oMsgText)
+	// msg.ReplyToMessageID = iMsg.MessageID
+
+	_, err := eh.TgBotAPI.Send(msg)
+
+	return err
 }
