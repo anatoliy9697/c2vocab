@@ -70,7 +70,7 @@ func (r pgRepo) TgChatByUserId(usrId int32) (*tcPkg.TgChat, error) {
 	return &tcPkg.TgChat{TgId: tgId, UserId: usrId, State: state}, nil
 }
 
-func (r pgRepo) UpdateTgChatState(tc *tcPkg.TgChat) error {
+func (r pgRepo) UpdateTgChat(tc *tcPkg.TgChat) error {
 	conn, err := r.p.Acquire(r.c)
 	if err != nil {
 		return err
@@ -78,10 +78,11 @@ func (r pgRepo) UpdateTgChatState(tc *tcPkg.TgChat) error {
 	defer conn.Release()
 
 	sql := `
-		UPDATE c2v_tg_chat SET state_code = $1
-		WHERE user_id = $2
+		UPDATE c2v_tg_chat SET (tg_id, state_code) = ($1, $2)
+		WHERE user_id = $3
 	`
 	_, err = conn.Exec(r.c, sql,
+		tc.TgId,
 		tc.State.Code,
 		tc.UserId,
 	)

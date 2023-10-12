@@ -58,7 +58,7 @@ loop:
 					HandlerCode: handlerCode,
 					TgBotAPI:    ef.TgBotAPI,
 					Repos:       ef.Repos,
-				}.Run(handlerDone, upd)
+				}.Run(handlerDone, &upd)
 			} else {
 				time.Sleep(time.Duration(ef.WaitForHandlerTimeout) * time.Millisecond)
 			}
