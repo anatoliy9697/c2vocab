@@ -11,6 +11,7 @@ import (
 	"github.com/anatoliy9697/c2vocab/internal/control"
 	tgchatRepo "github.com/anatoliy9697/c2vocab/internal/model/tgchat/repo"
 	usrRepo "github.com/anatoliy9697/c2vocab/internal/model/user/repo"
+	wlRepo "github.com/anatoliy9697/c2vocab/internal/model/wordlist/repo"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -45,6 +46,7 @@ func main() {
 		Repos: control.Repos{
 			User:   usrRepo.Init(mainCtx, pgPool),
 			TgChat: tgchatRepo.Init(mainCtx, pgPool),
+			WL:     wlRepo.Init(mainCtx, pgPool),
 		},
 	}.Run(mainCtx, efDone)
 

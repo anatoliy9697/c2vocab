@@ -17,5 +17,5 @@ func LangByCode(code string) *Lang {
 		}
 	}
 
-	return AvailLangs[0]
+	return nil
 }

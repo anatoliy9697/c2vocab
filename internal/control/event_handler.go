@@ -3,10 +3,12 @@ package control
 import (
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/anatoliy9697/c2vocab/internal/model/commons"
 	tcPkg "github.com/anatoliy9697/c2vocab/internal/model/tgchat"
 	usrPkg "github.com/anatoliy9697/c2vocab/internal/model/user"
-	"github.com/anatoliy9697/c2vocab/pkg/sliceutils"
+	wlPkg "github.com/anatoliy9697/c2vocab/internal/model/wordlist"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -33,8 +35,8 @@ func (eh EventHandler) Run(done chan string, upd *tgbotapi.Update) {
 	}
 
 	// Getting inner TgChat
-	var tgChat *tcPkg.TgChat
-	tgChat, err = eh.toInnerTgChat(usr, upd.FromChat())
+	var tc *tcPkg.TgChat
+	tc, err = eh.toInnerTgChat(usr, upd.FromChat())
 	if err != nil {
 		return
 	}
@@ -44,12 +46,17 @@ func (eh EventHandler) Run(done chan string, upd *tgbotapi.Update) {
 		return
 	}
 
-	err = eh.processUpdate(tgChat, upd)
+	err = eh.processUpdate(tc, upd)
 	if err != nil {
 		return
 	}
 
-	err = eh.sendReplyMessage(tgChat)
+	err = eh.sendReplyMessage(tc)
+	if err != nil {
+		return
+	}
+
+	err = eh.Repos.TgChat.UpdateTgChat(tc)
 	if err != nil {
 		return
 	}
@@ -73,7 +80,12 @@ func (eh EventHandler) toInnerUser(outerU *tgbotapi.User) (u *usrPkg.User, err e
 func (eh EventHandler) toInnerTgChat(u *usrPkg.User, outerChat *tgbotapi.Chat) (tc *tcPkg.TgChat, err error) {
 	if tc, err = eh.Repos.TgChat.TgChatByUserId(u.Id); err == nil && tc == nil {
 		state, _ := eh.Repos.TgChat.StartState()
-		tc = tcPkg.NewTgChat(outerChat.ID, u.Id, state)
+		tc = &tcPkg.TgChat{
+			TgId:      outerChat.ID,
+			UserId:    u.Id,
+			State:     state,
+			CreatedAt: time.Now(),
+		}
 		err = eh.Repos.TgChat.SaveNewTgChat(tc)
 	}
 
@@ -95,7 +107,7 @@ func (eh EventHandler) validateAndMapToIncMsg(tc *tcPkg.TgChat, upd *tgbotapi.Up
 			cmdArgs = cmdParts[1:]
 		}
 		cmdCode = strings.ReplaceAll(cmdParts[0], "/", "")
-		if !sliceutils.IsStrInSlice(tc.State.AvailCmdCodes, cmdCode) {
+		if !tc.State.IsCmdAvail(cmdCode) {
 			return nil, tcPkg.ErrUnexpectedCmd
 		}
 	} else if upd.Message != nil {
@@ -123,6 +135,29 @@ func (eh EventHandler) validateAndMapToIncMsg(tc *tcPkg.TgChat, upd *tgbotapi.Up
 	return tcPkg.NewIncomingMsg(cmd, cmdArgs, msgText), nil
 }
 
+func (eh EventHandler) processIncomingMsg(tc *tcPkg.TgChat, msg *tcPkg.IncomingMsg) error {
+	var err error
+
+	switch {
+	case msg.Cmd != nil && msg.Cmd.Code == "wl_frgn_lang":
+		tc.WLFrgnLang = commons.LangByCode(msg.CmdArgs[0])
+	case msg.Cmd != nil && msg.Cmd.Code == "wl_ntv_lang":
+		tc.WLNtvLang = commons.LangByCode(msg.CmdArgs[0])
+	case msg.Text != "" && tc.State.WaitForWLName:
+		wl := &wlPkg.WordList{
+			Active:    true,
+			Name:      msg.Text,
+			FrgnLang:  tc.WLFrgnLang,
+			NtvLang:   tc.WLNtvLang,
+			OwnerId:   tc.UserId,
+			CreatedAt: time.Now(),
+		}
+		err = eh.Repos.WL.SaveNewWL(wl)
+	}
+
+	return err
+}
+
 func (eh EventHandler) processUpdate(tc *tcPkg.TgChat, upd *tgbotapi.Update) error {
 	var err error
 	var msg *tcPkg.IncomingMsg
@@ -132,40 +167,28 @@ func (eh EventHandler) processUpdate(tc *tcPkg.TgChat, upd *tgbotapi.Update) err
 		return err
 	}
 
-	// Тут будет обработка данных пользователя
-
-	tc.SetState(msg.Cmd.DestState)
-
-	err = eh.Repos.TgChat.UpdateTgChat(tc)
+	err = eh.processIncomingMsg(tc, msg)
 	if err != nil {
 		return err
 	}
+
+	// Set tgChat next state
+	var nextState *tcPkg.State
+	if msg.Cmd != nil {
+		nextState, err = eh.Repos.TgChat.StateByCode(msg.Cmd.DestStateCode)
+	} else if tc.State.NextStateCode != "" {
+		nextState, err = eh.Repos.TgChat.StateByCode(tc.State.NextStateCode)
+	}
+	if err != nil {
+		return err
+	}
+	tc.SetState(nextState)
 
 	return nil
 }
 
 func (eh EventHandler) sendReplyMessage(tc *tcPkg.TgChat) error {
-	var keyboard = tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("На старт", "/to_start"),
-			tgbotapi.NewInlineKeyboardButtonData("Главное меню", "/start"),
-		),
-	)
-
-	oMsgText := tc.State.Msg
-	if tc.State.MsgHdr != "" {
-		oMsgText = tc.State.MsgHdr + "\n\n" + oMsgText
-	}
-	if tc.State.MsgFtr != "" {
-		oMsgText += "\n\n" + tc.State.MsgFtr
-	}
-
-	msg := tgbotapi.NewMessage(tc.TgId, oMsgText)
-	// msg.ReplyToMessageID = iMsg.MessageID
-
-	msg.ReplyMarkup = keyboard
-
-	_, err := eh.TgBotAPI.Send(msg)
+	_, err := eh.TgBotAPI.Send(tc.TgOutgoingMsg())
 
 	return err
 }

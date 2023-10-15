@@ -49,8 +49,8 @@ func (r pgRepo) SaveNew(u *usrPkg.User) error {
 	defer conn.Release()
 
 	sql := `
-		INSERT INTO c2v_user(tg_id, tg_username, tg_first_name, tg_last_name, tg_lang_code, tg_is_bot)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO c2v_user(tg_id, tg_username, tg_first_name, tg_last_name, tg_lang_code, tg_is_bot, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id
 	`
 	var usrId int32
@@ -61,6 +61,7 @@ func (r pgRepo) SaveNew(u *usrPkg.User) error {
 		u.TgLastName,
 		u.Lang.Code,
 		u.TgIsBot,
+		u.CreatedAt,
 	).Scan(&usrId)
 	if err != nil {
 		return err

@@ -7,6 +7,7 @@ import (
 
 	tgchat "github.com/anatoliy9697/c2vocab/internal/model/tgchat/repo"
 	usr "github.com/anatoliy9697/c2vocab/internal/model/user/repo"
+	wl "github.com/anatoliy9697/c2vocab/internal/model/wordlist/repo"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/uuid"
 )
@@ -14,6 +15,7 @@ import (
 type Repos struct {
 	User   usr.Repo
 	TgChat tgchat.Repo
+	WL     wl.Repo
 }
 
 type EventFetcher struct {

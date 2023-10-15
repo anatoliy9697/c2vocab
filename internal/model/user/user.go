@@ -1,6 +1,8 @@
 package user
 
 import (
+	"time"
+
 	"github.com/anatoliy9697/c2vocab/internal/model/commons"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -13,6 +15,7 @@ type User struct {
 	TgLastName  string
 	Lang        *commons.Lang
 	TgIsBot     bool
+	CreatedAt   time.Time
 }
 
 func MapToInner(u *tgbotapi.User) *User {
@@ -23,5 +26,6 @@ func MapToInner(u *tgbotapi.User) *User {
 		TgLastName:  u.LastName,
 		Lang:        commons.LangByCode(u.LanguageCode),
 		TgIsBot:     u.IsBot,
+		CreatedAt:   time.Now(),
 	}
 }

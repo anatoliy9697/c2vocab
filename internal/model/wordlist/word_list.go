@@ -1,22 +1,24 @@
 package wordlist
 
 import (
+	"time"
+
 	"github.com/anatoliy9697/c2vocab/internal/model/commons"
-	"github.com/anatoliy9697/c2vocab/internal/model/user"
 )
 
 type WordList struct {
-	Id          uint32
-	Code        string
-	Name        string
-	NativeLang  *commons.Lang
-	ForeignLang *commons.Lang
-	Words       []*Word
-	Owner       *user.User
+	Id     int32
+	Active bool
+	// Code        string
+	Name      string
+	FrgnLang  *commons.Lang
+	NtvLang   *commons.Lang
+	OwnerId   int32
+	CreatedAt time.Time
 }
 
 type Word struct {
-	Id      uint32
+	Id      int32
 	Native  string
 	Foreign string
 }
