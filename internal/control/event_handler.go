@@ -2,6 +2,7 @@ package control
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -29,15 +30,13 @@ func (eh EventHandler) Run(done chan string, upd *tgbotapi.Update) {
 
 	// Getting inner user
 	var usr *usrPkg.User
-	usr, err = eh.toInnerUser(upd.SentFrom())
-	if err != nil {
+	if usr, err = eh.toInnerUser(upd.SentFrom()); err != nil {
 		return
 	}
 
 	// Getting inner TgChat
 	var tc *tcPkg.TgChat
-	tc, err = eh.toInnerTgChat(usr, upd.FromChat())
-	if err != nil {
+	if tc, err = eh.toInnerTgChat(usr, upd.FromChat()); err != nil {
 		return
 	}
 
@@ -46,18 +45,15 @@ func (eh EventHandler) Run(done chan string, upd *tgbotapi.Update) {
 		return
 	}
 
-	err = eh.processUpdate(tc, upd)
-	if err != nil {
+	if err = eh.processUpdate(tc, upd); err != nil {
 		return
 	}
 
-	err = eh.sendReplyMessage(tc)
-	if err != nil {
+	if err = eh.sendReplyMessage(tc); err != nil {
 		return
 	}
 
-	err = eh.Repos.TgChat.UpdateTgChat(tc)
-	if err != nil {
+	if err = eh.Repos.TgChat.UpdateTgChat(tc); err != nil {
 		return
 	}
 }
@@ -126,19 +122,25 @@ func (eh EventHandler) validateAndMapToIncMsg(tc *tcPkg.TgChat, upd *tgbotapi.Up
 	}
 
 	if cmdCode != "" {
-		cmd, err = eh.Repos.TgChat.CmdByCode(cmdCode)
-	}
-	if err != nil {
-		return nil, err
+		if cmd, err = eh.Repos.TgChat.CmdByCode(cmdCode); err != nil {
+			return nil, err
+		}
 	}
 
-	return tcPkg.NewIncomingMsg(cmd, cmdArgs, msgText), nil
+	return &tcPkg.IncomingMsg{
+		Cmd:     cmd,
+		CmdArgs: cmdArgs,
+		Text:    msgText,
+	}, nil
 }
 
 func (eh EventHandler) processIncomingMsg(tc *tcPkg.TgChat, msg *tcPkg.IncomingMsg) error {
 	var err error
 
 	switch {
+	case msg.Cmd != nil && (msg.Cmd.Code == "start" || msg.Cmd.Code == "to_main_menu"):
+		tc.WLFrgnLang = nil
+		tc.WLNtvLang = nil
 	case msg.Cmd != nil && msg.Cmd.Code == "wl_frgn_lang":
 		tc.WLFrgnLang = commons.LangByCode(msg.CmdArgs[0])
 	case msg.Cmd != nil && msg.Cmd.Code == "wl_ntv_lang":
@@ -152,23 +154,25 @@ func (eh EventHandler) processIncomingMsg(tc *tcPkg.TgChat, msg *tcPkg.IncomingM
 			OwnerId:   tc.UserId,
 			CreatedAt: time.Now(),
 		}
-		err = eh.Repos.WL.SaveNewWL(wl)
+		if err = eh.Repos.WL.SaveNewWL(wl); err != nil {
+			return err
+		}
+		tc.WLFrgnLang = nil
+		tc.WLNtvLang = nil
 	}
 
-	return err
+	return nil
 }
 
 func (eh EventHandler) processUpdate(tc *tcPkg.TgChat, upd *tgbotapi.Update) error {
 	var err error
 	var msg *tcPkg.IncomingMsg
 
-	msg, err = eh.validateAndMapToIncMsg(tc, upd)
-	if err != nil {
+	if msg, err = eh.validateAndMapToIncMsg(tc, upd); err != nil {
 		return err
 	}
 
-	err = eh.processIncomingMsg(tc, msg)
-	if err != nil {
+	if err = eh.processIncomingMsg(tc, msg); err != nil {
 		return err
 	}
 
@@ -187,8 +191,95 @@ func (eh EventHandler) processUpdate(tc *tcPkg.TgChat, upd *tgbotapi.Update) err
 	return nil
 }
 
-func (eh EventHandler) sendReplyMessage(tc *tcPkg.TgChat) error {
-	_, err := eh.TgBotAPI.Send(tc.TgOutgoingMsg())
+func (eh EventHandler) TgInlineKeyboradStateCmdRows(tc *tcPkg.TgChat) ([][]tgbotapi.InlineKeyboardButton, error) {
+	var err error
+	var inlineKeyboardRows [][]tgbotapi.InlineKeyboardButton
 
-	return err
+	switch { // TODO: Повыносить все case'ы нахрен в функции
+	case tc.State.WaitForWLFrgnLang:
+		rowsCount := len(commons.AvailLangs)
+		inlineKeyboardRows = make([][]tgbotapi.InlineKeyboardButton, rowsCount)
+		for i, lang := range commons.AvailLangs {
+			inlineKeyboardRows[i] = make([]tgbotapi.InlineKeyboardButton, 1)
+			inlineKeyboardRows[i][0] = tgbotapi.NewInlineKeyboardButtonData(lang.Name, tc.State.StateCmd.Code+" "+lang.Code)
+		}
+	case tc.State.WaitForWLNtvLang:
+		rowsCount := len(commons.AvailLangs) - 1
+		inlineKeyboardRows = make([][]tgbotapi.InlineKeyboardButton, rowsCount)
+		i := 0
+		for _, lang := range commons.AvailLangs {
+			if lang.Code != tc.WLFrgnLang.Code {
+				inlineKeyboardRows[i] = make([]tgbotapi.InlineKeyboardButton, 1)
+				inlineKeyboardRows[i][0] = tgbotapi.NewInlineKeyboardButtonData(lang.Name, tc.State.StateCmd.Code+" "+lang.Code)
+				i++
+			}
+		}
+	case tc.State.StateCmd != nil && tc.State.StateCmd.Code == "wl":
+		var wls []*wlPkg.WordList
+		if wls, err = eh.Repos.WL.ActiveWLByOwnerId(tc.UserId); err != nil {
+			return nil, err
+		}
+		var inlineKeyboardRow []tgbotapi.InlineKeyboardButton
+		for _, wl := range wls {
+			inlineKeyboardRow = []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(wl.Name, tc.State.StateCmd.Code+" "+strconv.Itoa(int(wl.Id)))}
+			inlineKeyboardRows = append(inlineKeyboardRows, inlineKeyboardRow)
+		}
+	}
+
+	return inlineKeyboardRows, nil
+}
+
+func (eh EventHandler) TgInlineKeyboradMarkup(tc *tcPkg.TgChat) (tgbotapi.InlineKeyboardMarkup, error) {
+	var inlineKeyboardMarkup tgbotapi.InlineKeyboardMarkup
+	inlineKeyboardRows := make([][]tgbotapi.InlineKeyboardButton, 0)
+
+	inlineKeyboardStateCmdRows, err := eh.TgInlineKeyboradStateCmdRows(tc)
+	if err != nil {
+		return inlineKeyboardMarkup, err
+	}
+	if len(inlineKeyboardStateCmdRows) > 0 {
+		inlineKeyboardRows = append(inlineKeyboardRows, inlineKeyboardStateCmdRows...)
+	}
+
+	inlineKeyboardAvailCmdsRows := tc.State.TgInlineKeyboradAvailCmdsRows()
+	if len(inlineKeyboardAvailCmdsRows) > 0 {
+		inlineKeyboardRows = append(inlineKeyboardRows, inlineKeyboardAvailCmdsRows...)
+	}
+
+	if len(inlineKeyboardRows) > 0 {
+		inlineKeyboardMarkup = tgbotapi.NewInlineKeyboardMarkup(inlineKeyboardRows...)
+	}
+
+	return inlineKeyboardMarkup, nil
+}
+
+func (eh EventHandler) TgOutgoingMsg(tc *tcPkg.TgChat) (tgbotapi.MessageConfig, error) {
+	msg := tgbotapi.NewMessage(tc.TgId, tc.TgOutgoingMsgText())
+
+	// msg.ReplyToMessageID = iMsg.MessageID
+
+	// TgChat control buttons
+	replyMarkup, err := eh.TgInlineKeyboradMarkup(tc)
+	if err != nil {
+		return msg, err
+	}
+
+	msg.ReplyMarkup = replyMarkup
+
+	return msg, nil
+}
+
+func (eh EventHandler) sendReplyMessage(tc *tcPkg.TgChat) error {
+	var err error
+	var msg tgbotapi.MessageConfig
+
+	if msg, err = eh.TgOutgoingMsg(tc); err != nil {
+		return err
+	}
+
+	if _, err = eh.TgBotAPI.Send(msg); err != nil {
+		return err
+	}
+
+	return nil
 }

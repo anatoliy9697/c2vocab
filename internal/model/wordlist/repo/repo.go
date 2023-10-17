@@ -9,6 +9,7 @@ import (
 
 type Repo interface {
 	SaveNewWL(*wlPkg.WordList) error
+	ActiveWLByOwnerId(int32) ([]*wlPkg.WordList, error)
 }
 
 func Init(c context.Context, p *pgxpool.Pool) Repo {

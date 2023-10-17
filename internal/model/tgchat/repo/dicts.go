@@ -12,6 +12,7 @@ var cmds = map[string]*tcPkg.Cmd{
 	"wl_ntv_lang":  {Code: "wl_ntv_lang", DestStateCode: "wl_creation_name"},
 	"wl_name":      {Code: "wl_name", DestStateCode: "main_menu"},
 	"all_wl":       {Code: "all_wl", DisplayLabel: "Мои списки", DestStateCode: "all_wl"},
+	"wl":           {Code: "wl", DestStateCode: "main_menu"},
 }
 
 var states = map[string]*tcPkg.State{
@@ -20,5 +21,5 @@ var states = map[string]*tcPkg.State{
 	"wl_creation_frgn_lang": {Code: "wl_creation_frgn_lang", MsgHdr: "Создание списка слов", MsgBody: "Выберите изучаемый язык", WaitForWLFrgnLang: true, StateCmd: cmds["wl_frgn_lang"], AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
 	"wl_creation_ntv_lang":  {Code: "wl_creation_ntv_lang", MsgHdr: "Создание списка слов", MsgBody: "Выберите родной (базовый) язык", WaitForWLNtvLang: true, StateCmd: cmds["wl_ntv_lang"], AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
 	"wl_creation_name":      {Code: "wl_creation_name", MsgHdr: "Создание списка слов", MsgBody: "Введите название списка", WaitForWLName: true, NextStateCode: "main_menu", AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
-	"all_wl":                {Code: "all_wl", MsgHdr: "Мои списки", MsgBody: "Всего списков: 0 шт.", AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
+	"all_wl":                {Code: "all_wl", MsgHdr: "Мои списки", StateCmd: cmds["wl"], AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
 }

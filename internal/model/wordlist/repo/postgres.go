@@ -2,7 +2,9 @@ package repo
 
 import (
 	"context"
+	"time"
 
+	"github.com/anatoliy9697/c2vocab/internal/model/commons"
 	wlPkg "github.com/anatoliy9697/c2vocab/internal/model/wordlist"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -44,4 +46,43 @@ func (r pgRepo) SaveNewWL(wl *wlPkg.WordList) error {
 	wl.Id = wlId
 
 	return nil
+}
+
+func (r pgRepo) ActiveWLByOwnerId(ownerId int32) ([]*wlPkg.WordList, error) {
+	conn, err := r.pool.Acquire(r.ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	sql := `
+		SELECT id, name, frgn_lang_code, ntv_lang_code, created_at
+		FROM c2v_word_list
+		WHERE owner_id = $1 AND active IS TRUE
+	`
+	rows, err := conn.Query(r.ctx, sql, ownerId)
+	if err != nil {
+		return nil, err
+	}
+
+	wls := make([]*wlPkg.WordList, 0)
+	var id int32
+	var name, frgnLangCode, ntvLangCode string
+	var createdAt time.Time
+	for rows.Next() {
+		if err = rows.Scan(&id, &name, &frgnLangCode, &ntvLangCode, &createdAt); err != nil {
+			return nil, err
+		}
+		wls = append(wls, &wlPkg.WordList{
+			Id:        id,
+			Active:    true,
+			Name:      name,
+			FrgnLang:  commons.LangByCode(frgnLangCode),
+			NtvLang:   commons.LangByCode(ntvLangCode),
+			OwnerId:   ownerId,
+			CreatedAt: createdAt,
+		})
+	}
+
+	return wls, nil
 }
