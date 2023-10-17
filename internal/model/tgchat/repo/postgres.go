@@ -52,18 +52,20 @@ func (r pgRepo) TgChatByUserId(usrId int32) (*tcPkg.TgChat, error) {
 	defer conn.Release()
 
 	var tgId int64
-	var stateCode, wlFrgnLangCode, wlNtvLangCode string
 	var createdAt time.Time
+	var stateCode, wlFrgnLangCode, wlNtvLangCode string
+	var botLastMsgId int
 	sql := `
-		SELECT tg_id, state_code, wl_frgn_lang_code, wl_ntv_lang_code, created_at FROM c2v_tg_chat
+		SELECT tg_id, created_at, state_code, wl_frgn_lang_code, wl_ntv_lang_code, COALESCE(bot_last_msg_id, 0) FROM c2v_tg_chat
 		WHERE user_id = $1
 	`
 	err = conn.QueryRow(r.c, sql, usrId).Scan(
 		&tgId,
+		&createdAt,
 		&stateCode,
 		&wlFrgnLangCode,
 		&wlNtvLangCode,
-		&createdAt,
+		&botLastMsgId,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
@@ -78,12 +80,13 @@ func (r pgRepo) TgChatByUserId(usrId int32) (*tcPkg.TgChat, error) {
 	}
 
 	return &tcPkg.TgChat{
-		TgId:       tgId,
-		UserId:     usrId,
-		State:      state,
-		WLFrgnLang: commons.LangByCode(wlFrgnLangCode),
-		WLNtvLang:  commons.LangByCode(wlNtvLangCode),
-		CreatedAt:  createdAt,
+		TgId:         tgId,
+		CreatedAt:    createdAt,
+		UserId:       usrId,
+		State:        state,
+		WLFrgnLang:   commons.LangByCode(wlFrgnLangCode),
+		WLNtvLang:    commons.LangByCode(wlNtvLangCode),
+		BotLastMsgId: botLastMsgId,
 	}, nil
 }
 
@@ -102,14 +105,15 @@ func (r pgRepo) UpdateTgChat(tc *tcPkg.TgChat) error {
 		wlNtvLangCode = tc.WLNtvLang.Code
 	}
 	sql := `
-		UPDATE c2v_tg_chat SET (tg_id, state_code, wl_frgn_lang_code, wl_ntv_lang_code) = ($1, $2, $3, $4)
-		WHERE user_id = $5
+		UPDATE c2v_tg_chat SET (tg_id, state_code, wl_frgn_lang_code, wl_ntv_lang_code, bot_last_msg_id) = ($1, $2, $3, $4, $5)
+		WHERE user_id = $6
 	`
 	_, err = conn.Exec(r.c, sql,
 		tc.TgId,
 		tc.State.Code,
 		wlFrgnLangCode,
 		wlNtvLangCode,
+		tc.BotLastMsgId,
 		tc.UserId,
 	)
 	if err != nil {

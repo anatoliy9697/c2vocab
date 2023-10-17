@@ -191,7 +191,7 @@ func (eh EventHandler) processUpdate(tc *tcPkg.TgChat, upd *tgbotapi.Update) err
 	return nil
 }
 
-func (eh EventHandler) TgInlineKeyboradStateCmdRows(tc *tcPkg.TgChat) ([][]tgbotapi.InlineKeyboardButton, error) {
+func (eh EventHandler) tgInlineKeyboradStateCmdRows(tc *tcPkg.TgChat) ([][]tgbotapi.InlineKeyboardButton, error) {
 	var err error
 	var inlineKeyboardRows [][]tgbotapi.InlineKeyboardButton
 
@@ -229,11 +229,11 @@ func (eh EventHandler) TgInlineKeyboradStateCmdRows(tc *tcPkg.TgChat) ([][]tgbot
 	return inlineKeyboardRows, nil
 }
 
-func (eh EventHandler) TgInlineKeyboradMarkup(tc *tcPkg.TgChat) (tgbotapi.InlineKeyboardMarkup, error) {
+func (eh EventHandler) tgInlineKeyboradMarkup(tc *tcPkg.TgChat) (tgbotapi.InlineKeyboardMarkup, error) {
 	var inlineKeyboardMarkup tgbotapi.InlineKeyboardMarkup
 	inlineKeyboardRows := make([][]tgbotapi.InlineKeyboardButton, 0)
 
-	inlineKeyboardStateCmdRows, err := eh.TgInlineKeyboradStateCmdRows(tc)
+	inlineKeyboardStateCmdRows, err := eh.tgInlineKeyboradStateCmdRows(tc)
 	if err != nil {
 		return inlineKeyboardMarkup, err
 	}
@@ -253,13 +253,11 @@ func (eh EventHandler) TgInlineKeyboradMarkup(tc *tcPkg.TgChat) (tgbotapi.Inline
 	return inlineKeyboardMarkup, nil
 }
 
-func (eh EventHandler) TgOutgoingMsg(tc *tcPkg.TgChat) (tgbotapi.MessageConfig, error) {
+func (eh EventHandler) tgOutgoingMsg(tc *tcPkg.TgChat) (tgbotapi.MessageConfig, error) {
 	msg := tgbotapi.NewMessage(tc.TgId, tc.TgOutgoingMsgText())
 
-	// msg.ReplyToMessageID = iMsg.MessageID
-
 	// TgChat control buttons
-	replyMarkup, err := eh.TgInlineKeyboradMarkup(tc)
+	replyMarkup, err := eh.tgInlineKeyboradMarkup(tc)
 	if err != nil {
 		return msg, err
 	}
@@ -269,17 +267,49 @@ func (eh EventHandler) TgOutgoingMsg(tc *tcPkg.TgChat) (tgbotapi.MessageConfig, 
 	return msg, nil
 }
 
+func (eh EventHandler) tgMsgEditing(tc *tcPkg.TgChat) (tgbotapi.EditMessageTextConfig, error) {
+	var editMsgConfig tgbotapi.EditMessageTextConfig
+
+	// TgChat control buttons
+	replyMarkup, err := eh.tgInlineKeyboradMarkup(tc)
+	if err != nil {
+		return editMsgConfig, err
+	}
+
+	editMsgConfig = tgbotapi.NewEditMessageTextAndMarkup(
+		tc.TgId,
+		tc.BotLastMsgId,
+		tc.TgOutgoingMsgText(),
+		replyMarkup,
+	)
+
+	return editMsgConfig, nil
+}
+
 func (eh EventHandler) sendReplyMessage(tc *tcPkg.TgChat) error {
 	var err error
-	var msg tgbotapi.MessageConfig
+	var msg tgbotapi.Chattable
 
-	if msg, err = eh.TgOutgoingMsg(tc); err != nil {
+	if tc.BotLastMsgId != 0 {
+		msg, err = eh.tgMsgEditing(tc)
+	} else {
+		msg, err = eh.tgOutgoingMsg(tc)
+	}
+	if err != nil {
 		return err
 	}
 
-	if _, err = eh.TgBotAPI.Send(msg); err != nil {
-		return err
+	var msgInTg tgbotapi.Message
+	if msgInTg, err = eh.TgBotAPI.Send(msg); err != nil && tc.BotLastMsgId != 0 {
+		if msg, err = eh.tgOutgoingMsg(tc); err != nil {
+			return err
+		}
+		if msgInTg, err = eh.TgBotAPI.Send(msg); err != nil {
+			return err
+		}
 	}
+
+	tc.SetBotLastMsgId(msgInTg.MessageID)
 
 	return nil
 }

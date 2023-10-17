@@ -9,12 +9,13 @@ import (
 )
 
 type TgChat struct {
-	TgId       int64
-	UserId     int32
-	State      *State
-	WLFrgnLang *commons.Lang
-	WLNtvLang  *commons.Lang
-	CreatedAt  time.Time
+	TgId         int64
+	UserId       int32
+	CreatedAt    time.Time
+	State        *State
+	WLFrgnLang   *commons.Lang
+	WLNtvLang    *commons.Lang
+	BotLastMsgId int
 }
 
 type State struct {
@@ -51,6 +52,10 @@ var (
 
 func (tc *TgChat) SetState(s *State) {
 	tc.State = s
+}
+
+func (tc *TgChat) SetBotLastMsgId(msgId int) {
+	tc.BotLastMsgId = msgId
 }
 
 func (tc *TgChat) TgOutgoingMsgText() string {
