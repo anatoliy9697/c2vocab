@@ -86,3 +86,42 @@ func (r pgRepo) ActiveWLByOwnerId(ownerId int32) ([]*wlPkg.WordList, error) {
 
 	return wls, nil
 }
+
+func (r pgRepo) ById(id int32) (*wlPkg.WordList, error) {
+	conn, err := r.pool.Acquire(r.ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	sql := `
+		SELECT active, name, frgn_lang_code, ntv_lang_code, owner_id, created_at
+		FROM c2v_word_list
+		WHERE id = $1
+	`
+	var active bool
+	var name, frgnLangCode, ntvLangCode string
+	var ownerId int32
+	var createdAt time.Time
+	err = conn.QueryRow(r.ctx, sql, id).Scan(
+		&active,
+		&name,
+		&frgnLangCode,
+		&ntvLangCode,
+		&ownerId,
+		&createdAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &wlPkg.WordList{
+		Id:        id,
+		Active:    active,
+		Name:      name,
+		FrgnLang:  commons.LangByCode(frgnLangCode),
+		NtvLang:   commons.LangByCode(ntvLangCode),
+		OwnerId:   ownerId,
+		CreatedAt: createdAt,
+	}, nil
+}

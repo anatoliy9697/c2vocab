@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/anatoliy9697/c2vocab/internal/model/commons"
+	wlPkg "github.com/anatoliy9697/c2vocab/internal/model/wordlist"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -15,6 +16,8 @@ type TgChat struct {
 	State        *State
 	WLFrgnLang   *commons.Lang
 	WLNtvLang    *commons.Lang
+	WLId         int32
+	WL           *wlPkg.WordList
 	BotLastMsgId int
 }
 
@@ -38,6 +41,7 @@ type Cmd struct {
 }
 
 type IncomingMsg struct {
+	Id      int
 	Cmd     *Cmd
 	CmdArgs []string
 	Text    string

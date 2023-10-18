@@ -82,14 +82,23 @@ func (eh EventHandler) toInnerTgChat(u *usrPkg.User, outerChat *tgbotapi.Chat) (
 			State:     state,
 			CreatedAt: time.Now(),
 		}
-		err = eh.Repos.TgChat.SaveNewTgChat(tc)
+		if err = eh.Repos.TgChat.SaveNewTgChat(tc); err != nil {
+			return nil, err
+		}
 	}
 
-	return tc, err
+	if tc.WLId != 0 {
+		if tc.WL, err = eh.Repos.WL.ById(tc.WLId); err != nil {
+			return nil, err
+		}
+	}
+
+	return tc, nil
 }
 
 func (eh EventHandler) validateAndMapToIncMsg(tc *tcPkg.TgChat, upd *tgbotapi.Update) (*tcPkg.IncomingMsg, error) {
 	var err error
+	var id int
 	var cmdCode, msgText string
 	var cmdArgs []string
 	var cmd *tcPkg.Cmd
@@ -107,6 +116,7 @@ func (eh EventHandler) validateAndMapToIncMsg(tc *tcPkg.TgChat, upd *tgbotapi.Up
 			return nil, tcPkg.ErrUnexpectedCmd
 		}
 	} else if upd.Message != nil {
+		id = upd.Message.MessageID
 		if upd.Message.IsCommand() {
 			cmdCode = upd.Message.Command()
 			cmdArgs = strings.Split(upd.Message.CommandArguments(), " ")
@@ -128,10 +138,20 @@ func (eh EventHandler) validateAndMapToIncMsg(tc *tcPkg.TgChat, upd *tgbotapi.Up
 	}
 
 	return &tcPkg.IncomingMsg{
+		Id:      id,
 		Cmd:     cmd,
 		CmdArgs: cmdArgs,
 		Text:    msgText,
 	}, nil
+}
+
+func (eh EventHandler) deleteMsgInTg(chatId int64, msgId int) error {
+	var err error
+	delMsg := tgbotapi.NewDeleteMessage(chatId, msgId)
+
+	_, err = eh.TgBotAPI.Send(delMsg)
+
+	return err
 }
 
 func (eh EventHandler) processIncomingMsg(tc *tcPkg.TgChat, msg *tcPkg.IncomingMsg) error {
@@ -141,10 +161,21 @@ func (eh EventHandler) processIncomingMsg(tc *tcPkg.TgChat, msg *tcPkg.IncomingM
 	case msg.Cmd != nil && (msg.Cmd.Code == "start" || msg.Cmd.Code == "to_main_menu"):
 		tc.WLFrgnLang = nil
 		tc.WLNtvLang = nil
+		tc.WLId = 0
+		tc.WL = nil
 	case msg.Cmd != nil && msg.Cmd.Code == "wl_frgn_lang":
 		tc.WLFrgnLang = commons.LangByCode(msg.CmdArgs[0])
 	case msg.Cmd != nil && msg.Cmd.Code == "wl_ntv_lang":
 		tc.WLNtvLang = commons.LangByCode(msg.CmdArgs[0])
+	case msg.Cmd != nil && msg.Cmd.Code == "wl":
+		var id int
+		if id, err = strconv.Atoi(msg.CmdArgs[0]); err != nil {
+			return err
+		}
+		tc.WLId = int32(id)
+		if tc.WL, err = eh.Repos.WL.ById(tc.WLId); err != nil {
+			return err
+		}
 	case msg.Text != "" && tc.State.WaitForWLName:
 		wl := &wlPkg.WordList{
 			Active:    true,
@@ -170,6 +201,11 @@ func (eh EventHandler) processUpdate(tc *tcPkg.TgChat, upd *tgbotapi.Update) err
 
 	if msg, err = eh.validateAndMapToIncMsg(tc, upd); err != nil {
 		return err
+	}
+
+	// Removing incoming msg in tgChat, if it's not callback query
+	if msg.Id != 0 {
+		eh.deleteMsgInTg(tc.TgId, msg.Id)
 	}
 
 	if err = eh.processIncomingMsg(tc, msg); err != nil {
