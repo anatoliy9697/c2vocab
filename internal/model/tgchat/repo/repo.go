@@ -8,14 +8,14 @@ import (
 )
 
 type Repo interface {
-	SaveNewTgChat(*tcPkg.TgChat) error
+	SaveNewTgChat(*tcPkg.Chat) error
 	StartState() (*tcPkg.State, error)
-	TgChatByUserId(int32) (*tcPkg.TgChat, error)
+	TgChatByUserId(int32) (*tcPkg.Chat, error)
 	StateByCode(string) (*tcPkg.State, error)
-	UpdateTgChat(*tcPkg.TgChat) error
+	UpdateTgChat(*tcPkg.Chat) error
 	CmdByCode(string) (*tcPkg.Cmd, error)
 }
 
-func Init(c context.Context, p *pgxpool.Pool) Repo {
+func Init(c context.Context, p *pgxpool.Pool) (Repo, error) {
 	return initPGRepo(c, p)
 }

@@ -87,7 +87,7 @@ func (r pgRepo) ActiveWLByOwnerId(ownerId int32) ([]*wlPkg.WordList, error) {
 	return wls, nil
 }
 
-func (r pgRepo) ById(id int32) (*wlPkg.WordList, error) {
+func (r pgRepo) WLById(id int32) (*wlPkg.WordList, error) {
 	conn, err := r.pool.Acquire(r.ctx)
 	if err != nil {
 		return nil, err

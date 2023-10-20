@@ -9,7 +9,7 @@ import (
 	"syscall"
 
 	"github.com/anatoliy9697/c2vocab/internal/control"
-	tgchatRepo "github.com/anatoliy9697/c2vocab/internal/model/tgchat/repo"
+	tcRepo "github.com/anatoliy9697/c2vocab/internal/model/tgchat/repo"
 	usrRepo "github.com/anatoliy9697/c2vocab/internal/model/user/repo"
 	wlRepo "github.com/anatoliy9697/c2vocab/internal/model/wordlist/repo"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -36,6 +36,10 @@ func main() {
 	// tgBotAPI.Debug = true
 
 	// Event fetcher (ef) configurating and running
+	tgchatRepo, err := tcRepo.Init(mainCtx, pgPool)
+	if err != nil {
+		log.Fatal(err) // TODO: Сделать адекватное логирование и завершение программы
+	}
 	efDone := make(chan struct{})
 	go control.EventFetcher{
 		TgBotAPI:              tgBotAPI,
@@ -45,7 +49,7 @@ func main() {
 		WaitForHandlerTimeout: 100,
 		Repos: control.Repos{
 			User:   usrRepo.Init(mainCtx, pgPool),
-			TgChat: tgchatRepo.Init(mainCtx, pgPool),
+			TgChat: tgchatRepo,
 			WL:     wlRepo.Init(mainCtx, pgPool),
 		},
 	}.Run(mainCtx, efDone)

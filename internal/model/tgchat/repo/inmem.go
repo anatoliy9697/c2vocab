@@ -2,9 +2,25 @@ package repo
 
 import (
 	"errors"
+	"text/template"
 
 	tcPkg "github.com/anatoliy9697/c2vocab/internal/model/tgchat"
 )
+
+func initStateMsgTmpls() (err error) {
+	var tmplContent string
+	var tmpl *template.Template
+
+	for _, s := range states {
+		tmplContent = s.OutMsgTmplContent()
+		if tmpl, err = template.New(s.Code).Parse(tmplContent); err != nil {
+			return err
+		}
+		s.MsgTmpl = tmpl
+	}
+
+	return nil
+}
 
 func (r pgRepo) StartState() (*tcPkg.State, error) {
 	return states["start"], nil

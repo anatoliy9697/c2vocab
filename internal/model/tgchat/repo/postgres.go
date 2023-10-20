@@ -16,11 +16,15 @@ type pgRepo struct {
 	p *pgxpool.Pool
 }
 
-func initPGRepo(c context.Context, p *pgxpool.Pool) *pgRepo {
-	return &pgRepo{c, p}
+func initPGRepo(c context.Context, p *pgxpool.Pool) (*pgRepo, error) {
+	if err := initStateMsgTmpls(); err != nil {
+		return nil, err
+	}
+
+	return &pgRepo{c, p}, nil
 }
 
-func (r pgRepo) SaveNewTgChat(tc *tcPkg.TgChat) error {
+func (r pgRepo) SaveNewTgChat(tc *tcPkg.Chat) error {
 	conn, err := r.p.Acquire(r.c)
 	if err != nil {
 		return err
@@ -44,7 +48,7 @@ func (r pgRepo) SaveNewTgChat(tc *tcPkg.TgChat) error {
 	return nil
 }
 
-func (r pgRepo) TgChatByUserId(usrId int32) (*tcPkg.TgChat, error) {
+func (r pgRepo) TgChatByUserId(usrId int32) (*tcPkg.Chat, error) {
 	conn, err := r.p.Acquire(r.c)
 	if err != nil {
 		return nil, err
@@ -81,7 +85,7 @@ func (r pgRepo) TgChatByUserId(usrId int32) (*tcPkg.TgChat, error) {
 		return nil, err
 	}
 
-	return &tcPkg.TgChat{
+	return &tcPkg.Chat{
 		TgId:         tgId,
 		CreatedAt:    createdAt,
 		UserId:       usrId,
@@ -93,7 +97,7 @@ func (r pgRepo) TgChatByUserId(usrId int32) (*tcPkg.TgChat, error) {
 	}, nil
 }
 
-func (r pgRepo) UpdateTgChat(tc *tcPkg.TgChat) error {
+func (r pgRepo) UpdateTgChat(tc *tcPkg.Chat) error {
 	conn, err := r.p.Acquire(r.c)
 	if err != nil {
 		return err

@@ -1,7 +1,10 @@
 package tgchat
 
 import (
+	"bytes"
 	"errors"
+	"regexp"
+	"text/template"
 	"time"
 
 	"github.com/anatoliy9697/c2vocab/internal/model/commons"
@@ -9,7 +12,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-type TgChat struct {
+type Chat struct {
 	TgId         int64
 	UserId       int32
 	CreatedAt    time.Time
@@ -26,6 +29,7 @@ type State struct {
 	MsgHdr            string
 	MsgBody           string
 	MsgFtr            string
+	MsgTmpl           *template.Template
 	WaitForWLFrgnLang bool
 	WaitForWLNtvLang  bool
 	WaitForWLName     bool
@@ -40,11 +44,15 @@ type Cmd struct {
 	DestStateCode string
 }
 
-type IncomingMsg struct {
+type IncMsg struct {
 	Id      int
 	Cmd     *Cmd
 	CmdArgs []string
 	Text    string
+}
+
+type outMsgTmplArgs struct {
+	WLName string
 }
 
 var (
@@ -54,24 +62,64 @@ var (
 	ErrEmptyDataInput      = errors.New("получена пустая строка в качестве входных данных")
 )
 
-func (tc *TgChat) SetState(s *State) {
+var outMsgArgsRegExpInst *regexp.Regexp
+
+func OutMsgArgsRegExp() *regexp.Regexp {
+	if outMsgArgsRegExpInst == nil {
+		outMsgArgsRegExpInst = regexp.MustCompile(`{{\.(.*)}}`)
+	}
+
+	return outMsgArgsRegExpInst
+}
+
+func (tc *Chat) SetState(s *State) {
 	tc.State = s
 }
 
-func (tc *TgChat) SetBotLastMsgId(msgId int) {
+func (tc *Chat) SetBotLastMsgId(msgId int) {
 	tc.BotLastMsgId = msgId
 }
 
-func (tc *TgChat) TgOutgoingMsgText() string {
-	msgText := tc.State.MsgBody
-	if tc.State.MsgHdr != "" {
-		msgText = tc.State.MsgHdr + "\n\n" + msgText
-	}
-	if tc.State.MsgFtr != "" {
-		msgText += "\n\n" + tc.State.MsgFtr
+func (tc *Chat) OutMsgArgs(tmpl string) *outMsgTmplArgs {
+	args := &outMsgTmplArgs{}
+
+	submatches := OutMsgArgsRegExp().FindAllStringSubmatch(tmpl, -1)
+
+	for _, submatch := range submatches {
+		for _, group := range submatch {
+			switch group {
+			case "WLName":
+				args.WLName = tc.WL.Name
+			}
+		}
 	}
 
-	return msgText
+	return args
+}
+
+func (tc *Chat) OutMsgText() (string, error) {
+	var err error
+
+	tmplText := tc.State.OutMsgTmplContent()
+
+	var buf bytes.Buffer
+	if err = tc.State.MsgTmpl.Execute(&buf, tc.OutMsgArgs(tmplText)); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
+}
+
+func (s State) OutMsgTmplContent() string {
+	msgTmpl := s.MsgBody
+	if s.MsgHdr != "" {
+		msgTmpl = s.MsgHdr + "\n\n" + msgTmpl
+	}
+	if s.MsgFtr != "" {
+		msgTmpl += "\n\n" + s.MsgFtr
+	}
+
+	return msgTmpl
 }
 
 func (s State) IsWaitForDataInput() bool {
