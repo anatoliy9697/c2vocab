@@ -2,8 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,55 +11,72 @@ import (
 	tcRepo "github.com/anatoliy9697/c2vocab/internal/model/tgchat/repo"
 	usrRepo "github.com/anatoliy9697/c2vocab/internal/model/user/repo"
 	wlRepo "github.com/anatoliy9697/c2vocab/internal/model/wordlist/repo"
+	res "github.com/anatoliy9697/c2vocab/internal/resources"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
+	var err error
+
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})) // TODO: Вынести определение уровня логирования в параметры окружения или в конфиг
+
+	defer func() {
+		if err != nil {
+			logger.Error(err.Error())
+		}
+	}()
+
+	logger.Info("C2Vocab initialization")
+
 	// Creating subsidiary context and assigning it to external interruptions listening
 	mainCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	// Storage connection pool initialization
-	pgPool, err := pgxpool.New(mainCtx, os.Getenv("POSTGRES_CONN_STRING"))
-	if err != nil {
-		log.Fatal(err) // TODO: Сделать адекватное логирование и завершение программы
+	var pgPool *pgxpool.Pool
+	if pgPool, err = pgxpool.New(mainCtx, os.Getenv("POSTGRES_CONN_STRING")); err != nil {
+		return
 	}
 	defer pgPool.Close()
 
 	// Telegram client initialization
-	tgBotAPI, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_APITOKEN"))
-	if err != nil {
-		log.Fatal(err) // TODO: Сделать адекватное логирование и завершение программы
+	var tgBotAPI *tgbotapi.BotAPI
+	if tgBotAPI, err = tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_APITOKEN")); err != nil {
+		return
 	}
 	// tgBotAPI.Debug = true
 
 	// Event fetcher (ef) configurating and running
-	tgchatRepo, err := tcRepo.Init(mainCtx, pgPool)
-	if err != nil {
-		log.Fatal(err) // TODO: Сделать адекватное логирование и завершение программы
+	var tgchatRepo tcRepo.Repo
+	if tgchatRepo, err = tcRepo.Init(mainCtx, pgPool); err != nil {
+		return
+	}
+	res := res.Resources{
+		UsrRepo:  usrRepo.Init(mainCtx, pgPool),
+		TcRepo:   tgchatRepo,
+		WLRepo:   wlRepo.Init(mainCtx, pgPool),
+		TgBotAPI: tgBotAPI,
+		Logger:   logger,
 	}
 	efDone := make(chan struct{})
 	go control.EventFetcher{
-		TgBotAPI:              tgBotAPI,
 		TgBotUpdsOffset:       0,
 		TgBotUpdsTimeout:      30,
 		MaxEventHandlers:      10,
 		WaitForHandlerTimeout: 100,
-		Repos: control.Repos{
-			User:   usrRepo.Init(mainCtx, pgPool),
-			TgChat: tgchatRepo,
-			WL:     wlRepo.Init(mainCtx, pgPool),
-		},
+		Res:                   res,
 	}.Run(mainCtx, efDone)
+
+	logger.Info("C2Vocab is running")
 
 	// Keeping alive
 	<-mainCtx.Done()
 
-	fmt.Println("Производится grasefull shutdown. Ждем завершения дочерних горутин") // TODO: Сделать адекватное логирование
+	logger.Info("Shutdown initialized. Waiting for all subsidiary goroutines finishing")
 
 	// Waiting for event fetcher completion
 	<-efDone
 
-	fmt.Println("Все горутингы завершили свою работу") // TODO: Сделать адекватное логирование
+	logger.Info("C2Vocab execution completed")
 }

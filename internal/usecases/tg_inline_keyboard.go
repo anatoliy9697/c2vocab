@@ -6,7 +6,7 @@ import (
 	"github.com/anatoliy9697/c2vocab/internal/model/commons"
 	tcPkg "github.com/anatoliy9697/c2vocab/internal/model/tgchat"
 	wlPkg "github.com/anatoliy9697/c2vocab/internal/model/wordlist"
-	wlRepo "github.com/anatoliy9697/c2vocab/internal/model/wordlist/repo"
+	res "github.com/anatoliy9697/c2vocab/internal/resources"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -38,9 +38,9 @@ func WLNtvLangTgInlineKeyboard(tc *tcPkg.Chat) (ikRows [][]tgbotapi.InlineKeyboa
 	return ikRows
 }
 
-func AllWLTgInlineKeyboard(wlR wlRepo.Repo, tc *tcPkg.Chat) (ikRows [][]tgbotapi.InlineKeyboardButton, err error) {
+func AllWLTgInlineKeyboard(r res.Resources, tc *tcPkg.Chat) (ikRows [][]tgbotapi.InlineKeyboardButton, err error) {
 	var wls []*wlPkg.WordList
-	if wls, err = wlR.ActiveWLByOwnerId(tc.UserId); err != nil {
+	if wls, err = r.WLRepo.ActiveWLByOwnerId(tc.UserId); err != nil {
 		return nil, err
 	}
 
@@ -53,14 +53,14 @@ func AllWLTgInlineKeyboard(wlR wlRepo.Repo, tc *tcPkg.Chat) (ikRows [][]tgbotapi
 	return ikRows, nil
 }
 
-func TgInlineKeyboradStateCmdRows(wlR wlRepo.Repo, tc *tcPkg.Chat) (ikRows [][]tgbotapi.InlineKeyboardButton, err error) {
+func TgInlineKeyboradStateCmdRows(r res.Resources, tc *tcPkg.Chat) (ikRows [][]tgbotapi.InlineKeyboardButton, err error) {
 	switch {
 	case tc.State.WaitForWLFrgnLang:
 		ikRows = WLFrgnLangTgInlineKeyboard(tc)
 	case tc.State.WaitForWLNtvLang:
 		ikRows = WLNtvLangTgInlineKeyboard(tc)
 	case tc.State.StateCmd != nil && tc.State.StateCmd.Code == "wl":
-		if ikRows, err = AllWLTgInlineKeyboard(wlR, tc); err != nil {
+		if ikRows, err = AllWLTgInlineKeyboard(r, tc); err != nil {
 			return nil, err
 		}
 	}
@@ -68,10 +68,10 @@ func TgInlineKeyboradStateCmdRows(wlR wlRepo.Repo, tc *tcPkg.Chat) (ikRows [][]t
 	return ikRows, nil
 }
 
-func TgInlineKeyboradMarkup(wlR wlRepo.Repo, tc *tcPkg.Chat) (ik tgbotapi.InlineKeyboardMarkup, err error) {
+func TgInlineKeyboradMarkup(r res.Resources, tc *tcPkg.Chat) (ik tgbotapi.InlineKeyboardMarkup, err error) {
 	ikRows := make([][]tgbotapi.InlineKeyboardButton, 0)
 
-	ikStateCmdRows, err := TgInlineKeyboradStateCmdRows(wlR, tc)
+	ikStateCmdRows, err := TgInlineKeyboradStateCmdRows(r, tc)
 	if err != nil {
 		return ik, err
 	}

@@ -7,7 +7,7 @@ import (
 	"github.com/anatoliy9697/c2vocab/internal/model/commons"
 	tcPkg "github.com/anatoliy9697/c2vocab/internal/model/tgchat"
 	wlPkg "github.com/anatoliy9697/c2vocab/internal/model/wordlist"
-	wlRepo "github.com/anatoliy9697/c2vocab/internal/model/wordlist/repo"
+	res "github.com/anatoliy9697/c2vocab/internal/resources"
 )
 
 func ClearTgChaTmpFields(tc *tcPkg.Chat) {
@@ -25,7 +25,7 @@ func SetTgChatWLNtvLang(tc *tcPkg.Chat, langCode string) {
 	tc.WLNtvLang = commons.LangByCode(langCode)
 }
 
-func CreateWL(wlR wlRepo.Repo, tc *tcPkg.Chat, wlName string) (err error) {
+func CreateWL(r res.Resources, tc *tcPkg.Chat, wlName string) (err error) {
 	wl := &wlPkg.WordList{
 		Active:    true,
 		Name:      wlName,
@@ -35,7 +35,7 @@ func CreateWL(wlR wlRepo.Repo, tc *tcPkg.Chat, wlName string) (err error) {
 		CreatedAt: time.Now(),
 	}
 
-	if err = wlR.SaveNewWL(wl); err != nil {
+	if err = r.WLRepo.SaveNewWL(wl); err != nil {
 		return err
 	}
 
@@ -45,7 +45,7 @@ func CreateWL(wlR wlRepo.Repo, tc *tcPkg.Chat, wlName string) (err error) {
 	return nil
 }
 
-func SetTgChatWL(wlR wlRepo.Repo, tc *tcPkg.Chat, wlIdStr string) (err error) {
+func SetTgChatWL(r res.Resources, tc *tcPkg.Chat, wlIdStr string) (err error) {
 	var id int
 	if id, err = strconv.Atoi(wlIdStr); err != nil {
 		return err
@@ -53,9 +53,15 @@ func SetTgChatWL(wlR wlRepo.Repo, tc *tcPkg.Chat, wlIdStr string) (err error) {
 
 	tc.WLId = int32(id)
 
-	if tc.WL, err = wlR.WLById(tc.WLId); err != nil {
+	if tc.WL, err = r.WLRepo.WLById(tc.WLId); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func DeleteWL(r res.Resources, wl *wlPkg.WordList) (err error) {
+	wl.Deactivate()
+
+	return r.WLRepo.UpdateWL(wl)
 }

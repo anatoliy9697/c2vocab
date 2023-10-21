@@ -4,32 +4,31 @@ import (
 	"time"
 
 	tcPkg "github.com/anatoliy9697/c2vocab/internal/model/tgchat"
-	tcRepo "github.com/anatoliy9697/c2vocab/internal/model/tgchat/repo"
 	usrPkg "github.com/anatoliy9697/c2vocab/internal/model/user"
-	wlRepo "github.com/anatoliy9697/c2vocab/internal/model/wordlist/repo"
+	res "github.com/anatoliy9697/c2vocab/internal/resources"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func MapToInnerTgChatAndSave(tcR tcRepo.Repo, wlR wlRepo.Repo, outerTC *tgbotapi.Chat, u *usrPkg.User) (tc *tcPkg.Chat, err error) {
-	if tc, err = tcR.TgChatByUserId(u.Id); err != nil {
+func MapToInnerTgChatAndSave(r res.Resources, outerTC *tgbotapi.Chat, u *usrPkg.User) (tc *tcPkg.Chat, err error) {
+	if tc, err = r.TcRepo.TgChatByUserId(u.Id); err != nil {
 		return nil, err
 	}
 
 	if tc == nil {
-		state, _ := tcR.StartState()
+		state, _ := r.TcRepo.StartState()
 		tc = &tcPkg.Chat{
 			TgId:      outerTC.ID,
 			UserId:    u.Id,
 			State:     state,
 			CreatedAt: time.Now(),
 		}
-		if err = tcR.SaveNewTgChat(tc); err != nil {
+		if err = r.TcRepo.SaveNewTgChat(tc); err != nil {
 			return nil, err
 		}
 	}
 
 	if tc.WLId != 0 {
-		if tc.WL, err = wlR.WLById(tc.WLId); err != nil {
+		if tc.WL, err = r.WLRepo.WLById(tc.WLId); err != nil {
 			return nil, err
 		}
 	}
@@ -37,12 +36,12 @@ func MapToInnerTgChatAndSave(tcR tcRepo.Repo, wlR wlRepo.Repo, outerTC *tgbotapi
 	return tc, nil
 }
 
-func SetTgChatNextState(tcR tcRepo.Repo, tc *tcPkg.Chat, msg *tcPkg.IncMsg) (err error) {
+func SetTgChatNextState(r res.Resources, tc *tcPkg.Chat, msg *tcPkg.IncMsg) (err error) {
 	var nextState *tcPkg.State
 	if msg.Cmd != nil {
-		nextState, err = tcR.StateByCode(msg.Cmd.DestStateCode)
+		nextState, err = r.TcRepo.StateByCode(msg.Cmd.DestStateCode)
 	} else if tc.State.NextStateCode != "" {
-		nextState, err = tcR.StateByCode(tc.State.NextStateCode)
+		nextState, err = r.TcRepo.StateByCode(tc.State.NextStateCode)
 	}
 	if err != nil {
 		return err

@@ -125,3 +125,28 @@ func (r pgRepo) WLById(id int32) (*wlPkg.WordList, error) {
 		CreatedAt: createdAt,
 	}, nil
 }
+
+func (r pgRepo) UpdateWL(wl *wlPkg.WordList) error {
+	conn, err := r.pool.Acquire(r.ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	sql := `
+		UPDATE c2v_word_list SET (active, name, frgn_lang_code, ntv_lang_code) = ($1, $2, $3, $4)
+		WHERE id = $5
+	`
+	_, err = conn.Exec(r.ctx, sql,
+		wl.Active,
+		wl.Name,
+		wl.FrgnLang.Code,
+		wl.NtvLang.Code,
+		wl.Id,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

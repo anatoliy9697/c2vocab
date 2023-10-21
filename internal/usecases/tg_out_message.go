@@ -2,11 +2,11 @@ package usecases
 
 import (
 	tcPkg "github.com/anatoliy9697/c2vocab/internal/model/tgchat"
-	wlRepo "github.com/anatoliy9697/c2vocab/internal/model/wordlist/repo"
+	res "github.com/anatoliy9697/c2vocab/internal/resources"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func TgOutMsg(wlR wlRepo.Repo, tc *tcPkg.Chat) (msg tgbotapi.MessageConfig, err error) {
+func TgOutMsg(r res.Resources, tc *tcPkg.Chat) (msg tgbotapi.MessageConfig, err error) {
 	var msgText string
 	if msgText, err = tc.OutMsgText(); err != nil {
 		return msg, err
@@ -16,7 +16,7 @@ func TgOutMsg(wlR wlRepo.Repo, tc *tcPkg.Chat) (msg tgbotapi.MessageConfig, err 
 
 	// TgChat control buttons
 	var replyMarkup tgbotapi.InlineKeyboardMarkup
-	if replyMarkup, err = TgInlineKeyboradMarkup(wlR, tc); err != nil {
+	if replyMarkup, err = TgInlineKeyboradMarkup(r, tc); err != nil {
 		return msg, err
 	}
 
@@ -25,7 +25,7 @@ func TgOutMsg(wlR wlRepo.Repo, tc *tcPkg.Chat) (msg tgbotapi.MessageConfig, err 
 	return msg, nil
 }
 
-func TgMsgEditing(wlR wlRepo.Repo, tc *tcPkg.Chat) (editMsgConfig tgbotapi.EditMessageTextConfig, err error) {
+func TgMsgEditing(r res.Resources, tc *tcPkg.Chat) (editMsgConfig tgbotapi.EditMessageTextConfig, err error) {
 	var msgText string
 	if msgText, err = tc.OutMsgText(); err != nil {
 		return editMsgConfig, err
@@ -33,7 +33,7 @@ func TgMsgEditing(wlR wlRepo.Repo, tc *tcPkg.Chat) (editMsgConfig tgbotapi.EditM
 
 	// TgChat control buttons
 	var replyMarkup tgbotapi.InlineKeyboardMarkup
-	if replyMarkup, err = TgInlineKeyboradMarkup(wlR, tc); err != nil {
+	if replyMarkup, err = TgInlineKeyboradMarkup(r, tc); err != nil {
 		return editMsgConfig, err
 	}
 
@@ -42,23 +42,23 @@ func TgMsgEditing(wlR wlRepo.Repo, tc *tcPkg.Chat) (editMsgConfig tgbotapi.EditM
 	return editMsgConfig, nil
 }
 
-func SendReplyMessage(wlR wlRepo.Repo, tgClient *tgbotapi.BotAPI, tc *tcPkg.Chat) (err error) {
+func SendReplyMsg(r res.Resources, tc *tcPkg.Chat) (err error) {
 	var msg tgbotapi.Chattable
 	if tc.BotLastMsgId != 0 {
-		msg, err = TgMsgEditing(wlR, tc)
+		msg, err = TgMsgEditing(r, tc)
 	} else {
-		msg, err = TgOutMsg(wlR, tc)
+		msg, err = TgOutMsg(r, tc)
 	}
 	if err != nil {
 		return err
 	}
 
 	var msgInTg tgbotapi.Message
-	if msgInTg, err = tgClient.Send(msg); err != nil && tc.BotLastMsgId != 0 {
-		if msg, err = TgOutMsg(wlR, tc); err != nil {
+	if msgInTg, err = r.TgBotAPI.Send(msg); err != nil && tc.BotLastMsgId != 0 {
+		if msg, err = TgOutMsg(r, tc); err != nil {
 			return err
 		}
-		if msgInTg, err = tgClient.Send(msg); err != nil {
+		if msgInTg, err = r.TgBotAPI.Send(msg); err != nil {
 			return err
 		}
 	}
