@@ -8,52 +8,46 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func ValidateIncMsgAndMapToInner(r res.Resources, tc *tcPkg.Chat, upd *tgbotapi.Update) (incMsg *tcPkg.IncMsg, err error) {
-	var id int
-	var cmdCode, msgText string
-	var cmdArgs []string
+func MapIncMsgToInner(r res.Resources, tc *tcPkg.Chat, upd *tgbotapi.Update) (msg *tcPkg.IncMsg) {
+	msg = &tcPkg.IncMsg{}
 
 	if upd.CallbackQuery != nil {
 		if upd.CallbackQuery.Data == "" {
-			return nil, tcPkg.ErrEmptyCmd
+			msg.ValidationErr = tcPkg.ErrEmptyCmd
+			return msg
 		}
 		cmdParts := strings.Split(upd.CallbackQuery.Data, " ")
 		if len(cmdParts) > 1 {
-			cmdArgs = cmdParts[1:]
+			msg.CmdArgs = cmdParts[1:]
 		}
-		cmdCode = strings.ReplaceAll(cmdParts[0], "/", "")
-		if !tc.State.IsCmdAvail(cmdCode) {
-			return nil, tcPkg.ErrUnexpectedCmd
+		msg.CmdCode = strings.ReplaceAll(cmdParts[0], "/", "")
+		if !tc.State.IsCmdAvail(msg.CmdCode) {
+			msg.ValidationErr = tcPkg.ErrUnexpectedCmd
+			return msg
 		}
 	} else if upd.Message != nil {
-		id = upd.Message.MessageID
+		msg.Id = upd.Message.MessageID
 		if upd.Message.IsCommand() {
-			cmdCode = upd.Message.Command()
-			cmdArgs = strings.Split(upd.Message.CommandArguments(), " ")
-			if cmdCode != "start" {
-				return nil, tcPkg.ErrUnexpectedCmd
+			msg.CmdCode = upd.Message.Command()
+			msg.CmdArgs = strings.Split(upd.Message.CommandArguments(), " ")
+			if msg.CmdCode != "start" {
+				msg.ValidationErr = tcPkg.ErrUnexpectedCmd
+				return msg
 			}
 		} else {
-			msgText = upd.Message.Text
+			msg.Text = upd.Message.Text
 			if !tc.State.IsWaitForDataInput() {
-				return nil, tcPkg.ErrUnexpectedDataInput
+				msg.ValidationErr = tcPkg.ErrUnexpectedDataInput
+				return msg
 			}
 		}
 	}
 
-	var cmd *tcPkg.Cmd
-	if cmdCode != "" {
-		if cmd, err = r.TcRepo.CmdByCode(cmdCode); err != nil {
-			return nil, err
-		}
+	if msg.CmdCode != "" {
+		msg.Cmd, msg.ValidationErr = r.TcRepo.CmdByCode(msg.CmdCode)
 	}
 
-	return &tcPkg.IncMsg{
-		Id:      id,
-		Cmd:     cmd,
-		CmdArgs: cmdArgs,
-		Text:    msgText,
-	}, nil
+	return msg
 }
 
 func DeleteMsgInTg(r res.Resources, chatId int64, msgId int) (err error) {
@@ -90,14 +84,17 @@ func ProcessIncMsg(r res.Resources, tc *tcPkg.Chat, msg *tcPkg.IncMsg) (err erro
 }
 
 func ProcessUpd(r res.Resources, tc *tcPkg.Chat, upd *tgbotapi.Update) (err error) {
-	var msg *tcPkg.IncMsg
-	if msg, err = ValidateIncMsgAndMapToInner(r, tc, upd); err != nil {
-		return err
-	}
+	msg := MapIncMsgToInner(r, tc, upd)
+
+	r.Logger.Info("Got incoming message", "incMsg", msg)
 
 	// Removing incoming msg in tgChat, if it's not callback query
 	if msg.Id != 0 {
 		DeleteMsgInTg(r, tc.TgId, msg.Id)
+	}
+
+	if msg.ValidationErr != nil {
+		return msg.ValidationErr
 	}
 
 	if err = ProcessIncMsg(r, tc, msg); err != nil {

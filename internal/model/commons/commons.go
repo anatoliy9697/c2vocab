@@ -1,8 +1,8 @@
 package commons
 
 type Lang struct {
-	Code string
-	Name string
+	Code string `json:"code"`
+	Name string `json:"-"`
 }
 
 var AvailLangs = []*Lang{

@@ -6,9 +6,9 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func TgOutMsg(r res.Resources, tc *tcPkg.Chat) (msg tgbotapi.MessageConfig, err error) {
+func TgOutMsg(r res.Resources, tc *tcPkg.Chat, errText string) (msg tgbotapi.MessageConfig, err error) {
 	var msgText string
-	if msgText, err = tc.OutMsgText(); err != nil {
+	if msgText, err = tc.OutMsgText(errText); err != nil {
 		return msg, err
 	}
 
@@ -25,9 +25,9 @@ func TgOutMsg(r res.Resources, tc *tcPkg.Chat) (msg tgbotapi.MessageConfig, err 
 	return msg, nil
 }
 
-func TgMsgEditing(r res.Resources, tc *tcPkg.Chat) (editMsgConfig tgbotapi.EditMessageTextConfig, err error) {
+func TgMsgEditing(r res.Resources, tc *tcPkg.Chat, errText string) (editMsgConfig tgbotapi.EditMessageTextConfig, err error) {
 	var msgText string
-	if msgText, err = tc.OutMsgText(); err != nil {
+	if msgText, err = tc.OutMsgText(errText); err != nil {
 		return editMsgConfig, err
 	}
 
@@ -42,25 +42,26 @@ func TgMsgEditing(r res.Resources, tc *tcPkg.Chat) (editMsgConfig tgbotapi.EditM
 	return editMsgConfig, nil
 }
 
-func SendReplyMsg(r res.Resources, tc *tcPkg.Chat) (err error) {
+func SendReplyMsg(r res.Resources, tc *tcPkg.Chat, errText string) (err error) {
 	var msg tgbotapi.Chattable
-	if tc.BotLastMsgId != 0 {
-		msg, err = TgMsgEditing(r, tc)
-	} else {
-		msg, err = TgOutMsg(r, tc)
-	}
-	if err != nil {
+	if msg, err = TgOutMsg(r, tc, errText); err != nil {
 		return err
 	}
 
+	r.Logger.Info("Sending reply message", "replyMsg", msg)
+
 	var msgInTg tgbotapi.Message
 	if msgInTg, err = r.TgBotAPI.Send(msg); err != nil && tc.BotLastMsgId != 0 {
-		if msg, err = TgOutMsg(r, tc); err != nil {
+		if msg, err = TgOutMsg(r, tc, errText); err != nil {
 			return err
 		}
 		if msgInTg, err = r.TgBotAPI.Send(msg); err != nil {
 			return err
 		}
+	}
+
+	if tc.BotLastMsgId != 0 {
+		DeleteMsgInTg(r, tc.TgId, tc.BotLastMsgId)
 	}
 
 	tc.SetBotLastMsgId(msgInTg.MessageID)

@@ -17,13 +17,12 @@ func (eh EventHandler) Run(done chan string, upd *tgbotapi.Update) {
 	defer func() { done <- eh.Code }()
 
 	var err error
+	var tc *tcPkg.Chat
 
-	eh.Res.Logger = eh.Res.Logger.With("handler-code", eh.Code)
+	eh.Res.Logger = eh.Res.Logger.With("handlerCode", eh.Code)
 
 	defer func() {
-		if err != nil {
-			eh.Res.Logger.Error(err.Error())
-		}
+		usecases.ProcessErr(eh.Res, tc, err)
 	}()
 
 	var usr *usrPkg.User
@@ -31,7 +30,6 @@ func (eh EventHandler) Run(done chan string, upd *tgbotapi.Update) {
 		return
 	}
 
-	var tc *tcPkg.Chat
 	if tc, err = usecases.MapToInnerTgChatAndSave(eh.Res, upd.FromChat(), usr); err != nil {
 		return
 	}
@@ -45,9 +43,11 @@ func (eh EventHandler) Run(done chan string, upd *tgbotapi.Update) {
 		return
 	}
 
-	if err = usecases.SendReplyMsg(eh.Res, tc); err != nil {
+	if err = usecases.SendReplyMsg(eh.Res, tc, ""); err != nil {
 		return
 	}
+
+	eh.Res.Logger.Info("TgChat updating in DB", "tgChat", tc)
 
 	if err = eh.Res.TcRepo.UpdateTgChat(tc); err != nil {
 		return

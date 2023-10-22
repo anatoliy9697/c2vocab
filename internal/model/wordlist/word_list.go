@@ -7,13 +7,13 @@ import (
 )
 
 type WordList struct {
-	Id        int32
-	Active    bool
-	Name      string
-	FrgnLang  *commons.Lang
-	NtvLang   *commons.Lang
-	OwnerId   int32
-	CreatedAt time.Time
+	Id        int32         `json:"id"`
+	Active    bool          `json:"active"`
+	Name      string        `json:"name"`
+	FrgnLang  *commons.Lang `json:"frgnLang"`
+	NtvLang   *commons.Lang `json:"ntvLang"`
+	OwnerId   int32         `json:"ownerId"`
+	CreatedAt time.Time     `json:"createdAt"`
 }
 
 type Word struct {

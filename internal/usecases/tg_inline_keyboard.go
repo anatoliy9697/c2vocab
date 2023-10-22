@@ -45,9 +45,11 @@ func AllWLTgInlineKeyboard(r res.Resources, tc *tcPkg.Chat) (ikRows [][]tgbotapi
 	}
 
 	var ikRow []tgbotapi.InlineKeyboardButton
+	i := 1
 	for _, wl := range wls {
-		ikRow = []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(wl.Name, tc.State.StateCmd.Code+" "+strconv.Itoa(int(wl.Id)))}
+		ikRow = []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(strconv.Itoa(i)+". \""+wl.Name+"\"", tc.State.StateCmd.Code+" "+strconv.Itoa(int(wl.Id)))}
 		ikRows = append(ikRows, ikRow)
+		i++
 	}
 
 	return ikRows, nil

@@ -13,53 +13,58 @@ import (
 )
 
 type Chat struct {
-	TgId         int64
-	UserId       int32
-	CreatedAt    time.Time
-	State        *State
-	WLFrgnLang   *commons.Lang
-	WLNtvLang    *commons.Lang
-	WLId         int32
-	WL           *wlPkg.WordList
-	BotLastMsgId int
+	TgId         int64           `json:"tgId"`
+	UserId       int32           `json:"userId"`
+	CreatedAt    time.Time       `json:"createdAt"`
+	State        *State          `json:"-"`
+	WLFrgnLang   *commons.Lang   `json:"wlFrgnLang"`
+	WLNtvLang    *commons.Lang   `json:"wlNtvLang"`
+	WLId         int32           `json:"-"`
+	WL           *wlPkg.WordList `json:"wl"`
+	BotLastMsgId int             `json:"botLastMsgId"`
 }
 
 type State struct {
-	Code              string
-	MsgHdr            string
-	MsgBody           string
-	MsgFtr            string
-	MsgTmpl           *template.Template
-	WaitForWLFrgnLang bool
-	WaitForWLNtvLang  bool
-	WaitForWLName     bool
-	StateCmd          *Cmd
-	NextStateCode     string
-	AvailCmds         [][]*Cmd
+	Code              string             `json:"code"`
+	MsgHdr            string             `json:"-"`
+	MsgBody           string             `json:"-"`
+	MsgFtr            string             `json:"-"`
+	MsgTmpl           *template.Template `json:"-"`
+	WaitForWLFrgnLang bool               `json:"-"`
+	WaitForWLNtvLang  bool               `json:"-"`
+	WaitForWLName     bool               `json:"-"`
+	StateCmd          *Cmd               `json:"-"`
+	NextStateCode     string             `json:"-"`
+	AvailCmds         [][]*Cmd           `json:"-"`
 }
 
 type Cmd struct {
-	Code          string
-	DisplayLabel  string
-	DestStateCode string
+	Code          string `json:"code"`
+	DisplayLabel  string `json:"-"`
+	DestStateCode string `json:"-"`
 }
 
+type IncMsgValidationErr error
+
 type IncMsg struct {
-	Id      int
-	Cmd     *Cmd
-	CmdArgs []string
-	Text    string
+	Id            int                 `json:"id"`
+	CmdCode       string              `json:"cmdCode"`
+	Cmd           *Cmd                `json:"cmd"`
+	CmdArgs       []string            `json:"cmdArgs"`
+	Text          string              `json:"text"`
+	ValidationErr IncMsgValidationErr `json:"-"`
 }
 
 type outMsgTmplArgs struct {
-	WLName string
+	ErrText string
+	WLName  string
 }
 
 var (
-	ErrEmptyCmd            = errors.New("получена пустая команда")
-	ErrUnexpectedCmd       = errors.New("получена неожиданная команда")
-	ErrUnexpectedDataInput = errors.New("ожидается команда, не ввод данных")
-	ErrEmptyDataInput      = errors.New("получена пустая строка в качестве входных данных")
+	ErrEmptyCmd            IncMsgValidationErr = errors.New("получена пустая команда")
+	ErrUnexpectedCmd       IncMsgValidationErr = errors.New("получена неожиданная команда")
+	ErrUnexpectedDataInput IncMsgValidationErr = errors.New("ожидается команда, не ввод данных")
+	ErrEmptyDataInput      IncMsgValidationErr = errors.New("получена пустая строка в качестве входных данных")
 )
 
 var outMsgArgsRegExpInst *regexp.Regexp
@@ -80,7 +85,7 @@ func (tc *Chat) SetBotLastMsgId(msgId int) {
 	tc.BotLastMsgId = msgId
 }
 
-func (tc *Chat) OutMsgArgs(tmpl string) *outMsgTmplArgs {
+func (tc *Chat) OutMsgArgs(tmpl string, errText string) *outMsgTmplArgs {
 	args := &outMsgTmplArgs{}
 
 	submatches := OutMsgArgsRegExp().FindAllStringSubmatch(tmpl, -1)
@@ -88,6 +93,10 @@ func (tc *Chat) OutMsgArgs(tmpl string) *outMsgTmplArgs {
 	for _, submatch := range submatches {
 		for _, group := range submatch {
 			switch group {
+			case "ErrText":
+				if errText != "" {
+					args.ErrText = errText + "\n\n"
+				}
 			case "WLName":
 				args.WLName = tc.WL.Name
 			}
@@ -97,13 +106,13 @@ func (tc *Chat) OutMsgArgs(tmpl string) *outMsgTmplArgs {
 	return args
 }
 
-func (tc *Chat) OutMsgText() (string, error) {
+func (tc *Chat) OutMsgText(errText string) (string, error) {
 	var err error
 
 	tmplText := tc.State.OutMsgTmplContent()
 
 	var buf bytes.Buffer
-	if err = tc.State.MsgTmpl.Execute(&buf, tc.OutMsgArgs(tmplText)); err != nil {
+	if err = tc.State.MsgTmpl.Execute(&buf, tc.OutMsgArgs(tmplText, errText)); err != nil {
 		return "", err
 	}
 
@@ -111,7 +120,7 @@ func (tc *Chat) OutMsgText() (string, error) {
 }
 
 func (s State) OutMsgTmplContent() string {
-	msgTmpl := s.MsgBody
+	msgTmpl := "{{.ErrText}}" + s.MsgBody
 	if s.MsgHdr != "" {
 		msgTmpl = s.MsgHdr + "\n\n" + msgTmpl
 	}
