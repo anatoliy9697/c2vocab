@@ -71,7 +71,7 @@ var outMsgArgsRegExpInst *regexp.Regexp
 
 func OutMsgArgsRegExp() *regexp.Regexp {
 	if outMsgArgsRegExpInst == nil {
-		outMsgArgsRegExpInst = regexp.MustCompile(`{{\.(.*)}}`)
+		outMsgArgsRegExpInst = regexp.MustCompile(`{{\.([^{]+)}}`)
 	}
 
 	return outMsgArgsRegExpInst

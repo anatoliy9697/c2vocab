@@ -26,6 +26,9 @@ func ProcessErr(r res.Resources, tc *tcPkg.Chat, err error) {
 
 		// Getting tgChat without any changes made in RAM
 		tc, _ = r.TcRepo.TgChatByUserId(tc.UserId)
+		if tc != nil && tc.WLId != 0 {
+			tc.WL, _ = r.WLRepo.WLById(tc.WLId)
+		}
 
 		// Sending replay message, got by non-changed by current request, tgChat state with error info
 		if tc != nil {

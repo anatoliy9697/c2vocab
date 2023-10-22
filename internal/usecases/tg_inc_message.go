@@ -70,7 +70,7 @@ func ProcessIncMsg(r res.Resources, tc *tcPkg.Chat, msg *tcPkg.IncMsg) (err erro
 		if err = SetTgChatWL(r, tc, msg.CmdArgs[0]); err != nil {
 			return err
 		}
-	case msg.Cmd != nil && msg.Cmd.Code == "delete_wl":
+	case msg.Cmd != nil && msg.Cmd.Code == "confirm_wl_del":
 		if err = DeleteWL(r, tc.WL); err != nil {
 			return err
 		}
@@ -78,6 +78,7 @@ func ProcessIncMsg(r res.Resources, tc *tcPkg.Chat, msg *tcPkg.IncMsg) (err erro
 		if err = CreateWL(r, tc, msg.Text); err != nil {
 			return err
 		}
+	default:
 	}
 
 	return nil
