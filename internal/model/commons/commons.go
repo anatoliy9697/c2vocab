@@ -6,8 +6,8 @@ type Lang struct {
 }
 
 var AvailLangs = []*Lang{
-	{"en", "English"},
-	{"ru", "Русский"},
+	{"en", "🇺🇸 English"},
+	{"ru", "🇷🇺 Русский"},
 }
 
 func LangByCode(code string) *Lang {

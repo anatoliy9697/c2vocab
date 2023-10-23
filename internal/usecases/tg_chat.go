@@ -27,6 +27,8 @@ func MapToInnerTgChatAndSave(r res.Resources, outerTC *tgbotapi.Chat, u *usrPkg.
 		}
 	}
 
+	tc.User = u
+
 	if tc.WLId != 0 {
 		if tc.WL, err = r.WLRepo.WLById(tc.WLId); err != nil {
 			return nil, err

@@ -78,6 +78,8 @@ func ProcessIncMsg(r res.Resources, tc *tcPkg.Chat, msg *tcPkg.IncMsg) (err erro
 		if err = CreateWL(r, tc, msg.Text); err != nil {
 			return err
 		}
+	case msg.Text != "" && tc.State.WaitForWFrgn:
+		SetTgChatWordFrgn(tc, msg.Text)
 	default:
 	}
 

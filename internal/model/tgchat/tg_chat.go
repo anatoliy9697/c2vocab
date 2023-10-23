@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/anatoliy9697/c2vocab/internal/model/commons"
+	usrPkg "github.com/anatoliy9697/c2vocab/internal/model/user"
 	wlPkg "github.com/anatoliy9697/c2vocab/internal/model/wordlist"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -15,12 +16,14 @@ import (
 type Chat struct {
 	TgId         int64           `json:"tgId"`
 	UserId       int32           `json:"userId"`
+	User         *usrPkg.User    `json:"user"`
 	CreatedAt    time.Time       `json:"createdAt"`
 	State        *State          `json:"-"`
 	WLFrgnLang   *commons.Lang   `json:"wlFrgnLang"`
 	WLNtvLang    *commons.Lang   `json:"wlNtvLang"`
-	WLId         int32           `json:"-"`
+	WLId         int32           `json:"wlId"`
 	WL           *wlPkg.WordList `json:"wl"`
+	WordFrgn     string          `json:"wordFrgn"`
 	BotLastMsgId int             `json:"botLastMsgId"`
 }
 
@@ -33,6 +36,8 @@ type State struct {
 	WaitForWLFrgnLang bool               `json:"-"`
 	WaitForWLNtvLang  bool               `json:"-"`
 	WaitForWLName     bool               `json:"-"`
+	WaitForWFrgn      bool               `json:"-"`
+	WaitForWNtv       bool               `json:"-"`
 	StateCmd          *Cmd               `json:"-"`
 	NextStateCode     string             `json:"-"`
 	AvailCmds         [][]*Cmd           `json:"-"`
@@ -56,8 +61,10 @@ type IncMsg struct {
 }
 
 type outMsgTmplArgs struct {
-	ErrText string
-	WLName  string
+	ErrText    string
+	WLName     string
+	UsrTgFName string
+	UsrTgLName string
 }
 
 var (
@@ -97,6 +104,10 @@ func (tc *Chat) OutMsgArgs(tmpl string, errText string) *outMsgTmplArgs {
 				if errText != "" {
 					args.ErrText = errText + "\n\n"
 				}
+			case "UsrTgFName":
+				args.UsrTgFName = tc.User.TgFirstName
+			case "UsrTgLName":
+				args.UsrTgLName = tc.User.TgLastName
 			case "WLName":
 				args.WLName = tc.WL.Name
 			}
@@ -132,7 +143,7 @@ func (s State) OutMsgTmplContent() string {
 }
 
 func (s State) IsWaitForDataInput() bool {
-	return s.WaitForWLName
+	return s.WaitForWLName || s.WaitForWFrgn || s.WaitForWNtv
 }
 
 func (s State) IsCmdAvail(cmdCode string) bool {

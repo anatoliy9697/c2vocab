@@ -17,9 +17,11 @@ type WordList struct {
 }
 
 type Word struct {
-	Id      int32
-	Native  string
-	Foreign string
+	Id        int32     `json:"id"`
+	Foreign   string    `json:"foreign"`
+	Native    string    `json:"native"`
+	WLId      int32     `json:"wlId"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 func (wl *WordList) Deactivate() {

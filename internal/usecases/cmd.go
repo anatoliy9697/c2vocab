@@ -15,6 +15,7 @@ func ClearTgChaTmpFields(tc *tcPkg.Chat) {
 	tc.WLNtvLang = nil
 	tc.WLId = 0
 	tc.WL = nil
+	tc.WordFrgn = ""
 }
 
 func SetTgChatWLFrgnLang(tc *tcPkg.Chat, langCode string) {
@@ -64,4 +65,8 @@ func DeleteWL(r res.Resources, wl *wlPkg.WordList) (err error) {
 	wl.Deactivate()
 
 	return r.WLRepo.UpdateWL(wl)
+}
+
+func SetTgChatWordFrgn(tc *tcPkg.Chat, wordFrgn string) {
+	tc.WordFrgn = wordFrgn
 }

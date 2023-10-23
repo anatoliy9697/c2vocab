@@ -30,9 +30,13 @@ func (eh EventHandler) Run(done chan string, upd *tgbotapi.Update) {
 		return
 	}
 
+	eh.Res.Logger.Debug("User mapped to inner", "user", usr)
+
 	if tc, err = usecases.MapToInnerTgChatAndSave(eh.Res, upd.FromChat(), usr); err != nil {
 		return
 	}
+
+	eh.Res.Logger.Debug("TgChat mapped to inner", "tgChat", tc)
 
 	// Ignore non-message and non-command events
 	if upd.Message == nil && upd.CallbackQuery == nil {
@@ -42,6 +46,8 @@ func (eh EventHandler) Run(done chan string, upd *tgbotapi.Update) {
 	if err = usecases.ProcessUpd(eh.Res, tc, upd); err != nil {
 		return
 	}
+
+	eh.Res.Logger.Debug("Update processed", "tgChat", tc)
 
 	if err = usecases.SendReplyMsg(eh.Res, tc, ""); err != nil {
 		return

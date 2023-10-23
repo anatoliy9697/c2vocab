@@ -8,14 +8,14 @@ import (
 )
 
 type User struct {
-	Id          int32
-	TgId        int64
-	TgUserName  string
-	TgFirstName string
-	TgLastName  string
-	Lang        *commons.Lang
-	TgIsBot     bool
-	CreatedAt   time.Time
+	Id          int32         `json:"id"`
+	TgId        int64         `json:"tgId"`
+	TgUserName  string        `json:"tgUserName"`
+	TgFirstName string        `json:"tgFistName"`
+	TgLastName  string        `json:"tgLastName"`
+	Lang        *commons.Lang `json:"lang"`
+	TgIsBot     bool          `json:"tgIsBot"`
+	CreatedAt   time.Time     `json:"createdAt"`
 }
 
 func MapToInner(u *tgbotapi.User) *User {
