@@ -13,7 +13,7 @@ func MapIncMsgToInner(r res.Resources, tc *tcPkg.Chat, upd *tgbotapi.Update) (ms
 
 	if upd.CallbackQuery != nil {
 		if upd.CallbackQuery.Data == "" {
-			msg.ValidationErr = tcPkg.ErrEmptyCmd
+			msg.ValidationErr = &tcPkg.ErrEmptyCmd
 			return msg
 		}
 		cmdParts := strings.Split(upd.CallbackQuery.Data, " ")
@@ -22,7 +22,7 @@ func MapIncMsgToInner(r res.Resources, tc *tcPkg.Chat, upd *tgbotapi.Update) (ms
 		}
 		msg.CmdCode = strings.ReplaceAll(cmdParts[0], "/", "")
 		if !tc.State.IsCmdAvail(msg.CmdCode) {
-			msg.ValidationErr = tcPkg.ErrUnexpectedCmd
+			msg.ValidationErr = &tcPkg.ErrUnexpectedCmd
 			return msg
 		}
 	} else if upd.Message != nil {
@@ -31,20 +31,24 @@ func MapIncMsgToInner(r res.Resources, tc *tcPkg.Chat, upd *tgbotapi.Update) (ms
 			msg.CmdCode = upd.Message.Command()
 			msg.CmdArgs = strings.Split(upd.Message.CommandArguments(), " ")
 			if msg.CmdCode != "start" {
-				msg.ValidationErr = tcPkg.ErrUnexpectedCmd
+				msg.ValidationErr = &tcPkg.ErrUnexpectedCmd
 				return msg
 			}
 		} else {
 			msg.Text = upd.Message.Text
 			if !tc.State.IsWaitForDataInput() {
-				msg.ValidationErr = tcPkg.ErrUnexpectedDataInput
+				msg.ValidationErr = &tcPkg.ErrUnexpectedDataInput
 				return msg
 			}
 		}
 	}
 
 	if msg.CmdCode != "" {
-		msg.Cmd, msg.ValidationErr = r.TcRepo.CmdByCode(msg.CmdCode)
+		var err error
+		msg.Cmd, err = r.TcRepo.CmdByCode(msg.CmdCode)
+		if err != nil {
+			msg.ValidationErr = &tcPkg.IncMsgValidationErr{Msg: err.Error()}
+		}
 	}
 
 	return msg

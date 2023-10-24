@@ -17,15 +17,15 @@ func (eh EventHandler) Run(done chan string, upd *tgbotapi.Update) {
 	defer func() { done <- eh.Code }()
 
 	var err error
+	var usr *usrPkg.User
 	var tc *tcPkg.Chat
 
 	eh.Res.Logger = eh.Res.Logger.With("handlerCode", eh.Code)
 
 	defer func() {
-		usecases.ProcessErr(eh.Res, tc, err)
+		usecases.ProcessErr(eh.Res, tc, usr, err)
 	}()
 
-	var usr *usrPkg.User
 	if usr, err = usecases.MapToInnerUserAndSave(eh.Res, upd.SentFrom()); err != nil {
 		return
 	}

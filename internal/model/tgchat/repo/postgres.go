@@ -68,11 +68,11 @@ func (r pgRepo) TgChatByUserId(usrId int32) (*tcPkg.Chat, error) {
 			, COALESCE(wl_frgn_lang_code, '')
 			, COALESCE(wl_ntv_lang_code, '')
 			, COALESCE(wl_id, 0)
-			, COALESCE(word_frgn, '') 
+			, COALESCE(word_frgn, '')
 			, COALESCE(bot_last_msg_id, 0)
 		FROM c2v_tg_chat
 		WHERE user_id = $1
-	` // FIXME: При пустом строков поле не отрабатывает обработка ошибки или ошибка не выбрасывается
+	`
 	err = conn.QueryRow(r.c, sql, usrId).Scan(
 		&tgId,
 		&createdAt,

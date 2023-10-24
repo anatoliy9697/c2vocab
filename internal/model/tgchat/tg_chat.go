@@ -2,7 +2,6 @@ package tgchat
 
 import (
 	"bytes"
-	"errors"
 	"regexp"
 	"text/template"
 	"time"
@@ -49,15 +48,21 @@ type Cmd struct {
 	DestStateCode string `json:"-"`
 }
 
-type IncMsgValidationErr error
+type IncMsgValidationErr struct {
+	Msg string
+}
+
+func (e IncMsgValidationErr) Error() string {
+	return e.Msg
+}
 
 type IncMsg struct {
-	Id            int                 `json:"id"`
-	CmdCode       string              `json:"cmdCode"`
-	Cmd           *Cmd                `json:"cmd"`
-	CmdArgs       []string            `json:"cmdArgs"`
-	Text          string              `json:"text"`
-	ValidationErr IncMsgValidationErr `json:"-"`
+	Id            int                  `json:"id"`
+	CmdCode       string               `json:"cmdCode"`
+	Cmd           *Cmd                 `json:"cmd"`
+	CmdArgs       []string             `json:"cmdArgs"`
+	Text          string               `json:"text"`
+	ValidationErr *IncMsgValidationErr `json:"-"`
 }
 
 type outMsgTmplArgs struct {
@@ -68,10 +73,10 @@ type outMsgTmplArgs struct {
 }
 
 var (
-	ErrEmptyCmd            IncMsgValidationErr = errors.New("получена пустая команда")
-	ErrUnexpectedCmd       IncMsgValidationErr = errors.New("получена неожиданная команда")
-	ErrUnexpectedDataInput IncMsgValidationErr = errors.New("ожидается команда, не ввод данных")
-	ErrEmptyDataInput      IncMsgValidationErr = errors.New("получена пустая строка в качестве входных данных")
+	ErrEmptyCmd            IncMsgValidationErr = IncMsgValidationErr{Msg: "получена пустая команда"}
+	ErrUnexpectedCmd       IncMsgValidationErr = IncMsgValidationErr{Msg: "получена неожиданная команда"}
+	ErrUnexpectedDataInput IncMsgValidationErr = IncMsgValidationErr{Msg: "ожидается команда, не ввод данных"}
+	ErrEmptyDataInput      IncMsgValidationErr = IncMsgValidationErr{Msg: "получена пустая строка в качестве входных данных"}
 )
 
 var outMsgArgsRegExpInst *regexp.Regexp
