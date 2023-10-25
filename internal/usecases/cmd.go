@@ -70,3 +70,24 @@ func DeleteWL(r res.Resources, wl *wlPkg.WordList) (err error) {
 func SetTgChatWordFrgn(tc *tcPkg.Chat, wordFrgn string) {
 	tc.WordFrgn = wordFrgn
 }
+
+func CreateWord(r res.Resources, tc *tcPkg.Chat, wordNtv string) (err error) {
+	w := &wlPkg.Word{
+		Foreign:   tc.WordFrgn,
+		Native:    wordNtv,
+		WLId:      tc.WL.Id,
+		CreatedAt: time.Now(),
+	}
+
+	if err = r.WLRepo.SaveNewWord(w); err != nil {
+		return err
+	}
+
+	tc.WordFrgn = ""
+
+	return nil
+}
+
+func BackToWL(tc *tcPkg.Chat) {
+	tc.WordFrgn = ""
+}

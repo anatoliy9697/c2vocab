@@ -22,7 +22,8 @@ var cmds = map[string]*tcPkg.Cmd{
 	"confirm_wl_del": {Code: "confirm_wl_del", DisplayLabel: "✅ Да", DestStateCode: "all_wl"},
 	"reject_wl_del":  {Code: "reject_wl_del", DisplayLabel: "❌ Нет", DestStateCode: "wl"},
 
-	"add_w": {Code: "add_w", DisplayLabel: "✏️ Добавить слово", DestStateCode: "w_addition_frgn"},
+	"add_w":      {Code: "add_w", DisplayLabel: "✏️ Добавить слово", DestStateCode: "w_addition_frgn"},
+	"back_to_wl": {Code: "back_to_wl", DisplayLabel: "⬅️ Назад к списку слов", DestStateCode: "wl"},
 }
 
 var states = map[string]*tcPkg.State{
@@ -40,5 +41,6 @@ var states = map[string]*tcPkg.State{
 
 	"wl_del_confirmation": {Code: "wl_del_confirmation", MsgHdr: "Удаление списка слов", MsgBody: "Вы действительно хотите удалить список \"{{.WLName}}\"?", AvailCmds: [][]*tcPkg.Cmd{{cmds["confirm_wl_del"], cmds["reject_wl_del"]}}},
 
-	"w_addition_frgn": {Code: "w_addition_frgn", MsgHdr: "Новое слово списка \"{{.WLName}}\"", MsgBody: "Введите слово на изучаемом языке", WaitForWFrgn: true, NextStateCode: "wl", AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}}, // TODO: указать реальный NextStateCode
+	"w_addition_frgn": {Code: "w_addition_frgn", MsgHdr: "Новое слово списка \"{{.WLName}}\"", MsgBody: "Введите слово на изучаемом языке ({{.WLFrgnLang}})", WaitForWFrgn: true, NextStateCode: "w_addition_ntv", AvailCmds: [][]*tcPkg.Cmd{{cmds["back_to_wl"]}, {cmds["to_main_menu"]}}},
+	"w_addition_ntv":  {Code: "w_addition_ntv", MsgHdr: "Новое слово списка \"{{.WLName}}\"", MsgBody: "Введите перевод слова на родном (базовом) языке ({{.WLNtvLang}})", WaitForWNtv: true, NextStateCode: "wl", AvailCmds: [][]*tcPkg.Cmd{{cmds["back_to_wl"]}, {cmds["to_main_menu"]}}},
 }

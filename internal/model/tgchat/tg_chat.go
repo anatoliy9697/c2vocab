@@ -70,6 +70,8 @@ type outMsgTmplArgs struct {
 	WLName     string
 	UsrTgFName string
 	UsrTgLName string
+	WLFrgnLang string
+	WLNtvLang  string
 }
 
 var (
@@ -115,6 +117,10 @@ func (tc *Chat) OutMsgArgs(tmpl string, errText string) *outMsgTmplArgs {
 				args.UsrTgLName = tc.User.TgLastName
 			case "WLName":
 				args.WLName = tc.WL.Name
+			case "WLFrgnLang":
+				args.WLFrgnLang = tc.WL.FrgnLang.Name
+			case "WLNtvLang":
+				args.WLNtvLang = tc.WL.NtvLang.Name
 			}
 		}
 	}

@@ -26,7 +26,7 @@ func (r pgRepo) SaveNewWL(wl *wlPkg.WordList) error {
 	defer conn.Release()
 
 	sql := `
-		INSERT INTO c2v_word_list(active, name, frgn_lang_code, ntv_lang_code, owner_id, created_at)
+		INSERT INTO c2v_word_list (active, name, frgn_lang_code, ntv_lang_code, owner_id, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id
 	`
@@ -147,6 +147,34 @@ func (r pgRepo) UpdateWL(wl *wlPkg.WordList) error {
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (r pgRepo) SaveNewWord(w *wlPkg.Word) error {
+	conn, err := r.pool.Acquire(r.ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	sql := `
+		INSERT INTO c2v_word (frgn, ntv, wl_id, created_at)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id
+	`
+	var wId int32
+	err = conn.QueryRow(r.ctx, sql,
+		w.Foreign,
+		w.Native,
+		w.WLId,
+		w.CreatedAt,
+	).Scan(&wId)
+	if err != nil {
+		return err
+	}
+
+	w.Id = wId
 
 	return nil
 }
