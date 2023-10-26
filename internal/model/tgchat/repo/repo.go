@@ -10,7 +10,7 @@ import (
 type Repo interface {
 	SaveNewTgChat(*tcPkg.Chat) error
 	StartState() (*tcPkg.State, error)
-	TgChatByUserId(int32) (*tcPkg.Chat, error)
+	TgChatByUserId(int) (*tcPkg.Chat, error)
 	StateByCode(string) (*tcPkg.State, error)
 	UpdateTgChat(*tcPkg.Chat) error
 	CmdByCode(string) (*tcPkg.Cmd, error)

@@ -8,8 +8,8 @@ import (
 )
 
 type User struct {
-	Id          int32         `json:"id"`
-	TgId        int64         `json:"tgId"`
+	Id          int           `json:"id"`
+	TgId        int           `json:"tgId"`
 	TgUserName  string        `json:"tgUserName"`
 	TgFirstName string        `json:"tgFistName"`
 	TgLastName  string        `json:"tgLastName"`
@@ -20,7 +20,7 @@ type User struct {
 
 func MapToInner(u *tgbotapi.User) *User {
 	return &User{
-		TgId:        u.ID,
+		TgId:        int(u.ID),
 		TgUserName:  u.UserName,
 		TgFirstName: u.FirstName,
 		TgLastName:  u.LastName,

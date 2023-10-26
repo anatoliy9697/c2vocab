@@ -12,7 +12,7 @@ func TgOutMsg(r res.Resources, tc *tcPkg.Chat, errText string) (msg tgbotapi.Mes
 		return msg, err
 	}
 
-	msg = tgbotapi.NewMessage(tc.TgId, msgText)
+	msg = tgbotapi.NewMessage(int64(tc.TgId), msgText)
 
 	// TgChat control buttons
 	var replyMarkup tgbotapi.InlineKeyboardMarkup
@@ -37,7 +37,7 @@ func TgMsgEditing(r res.Resources, tc *tcPkg.Chat, errText string) (editMsgConfi
 		return editMsgConfig, err
 	}
 
-	editMsgConfig = tgbotapi.NewEditMessageTextAndMarkup(tc.TgId, tc.BotLastMsgId, msgText, replyMarkup)
+	editMsgConfig = tgbotapi.NewEditMessageTextAndMarkup(int64(tc.TgId), tc.BotLastMsgId, msgText, replyMarkup)
 
 	return editMsgConfig, nil
 }

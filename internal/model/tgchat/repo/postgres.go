@@ -48,18 +48,16 @@ func (r pgRepo) SaveNewTgChat(tc *tcPkg.Chat) error {
 	return nil
 }
 
-func (r pgRepo) TgChatByUserId(usrId int32) (*tcPkg.Chat, error) {
+func (r pgRepo) TgChatByUserId(usrId int) (*tcPkg.Chat, error) {
 	conn, err := r.p.Acquire(r.c)
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Release()
 
-	var tgId int64
+	var tgId, wlId, botLastMsgId int
 	var createdAt time.Time
 	var stateCode, wlFrgnLangCode, wlNtvLangCode, wordFrgn string
-	var wlId int32
-	var botLastMsgId int
 	sql := `
 		SELECT
 			tg_id

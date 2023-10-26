@@ -13,14 +13,14 @@ import (
 )
 
 type Chat struct {
-	TgId         int64           `json:"tgId"`
-	UserId       int32           `json:"userId"`
+	TgId         int             `json:"tgId"`
+	UserId       int             `json:"userId"`
 	User         *usrPkg.User    `json:"user"`
 	CreatedAt    time.Time       `json:"createdAt"`
 	State        *State          `json:"-"`
 	WLFrgnLang   *commons.Lang   `json:"wlFrgnLang"`
 	WLNtvLang    *commons.Lang   `json:"wlNtvLang"`
-	WLId         int32           `json:"wlId"`
+	WLId         int             `json:"wlId"`
 	WL           *wlPkg.WordList `json:"wl"`
 	WordFrgn     string          `json:"wordFrgn"`
 	BotLastMsgId int             `json:"botLastMsgId"`
@@ -72,6 +72,7 @@ type outMsgTmplArgs struct {
 	UsrTgLName string
 	WLFrgnLang string
 	WLNtvLang  string
+	WordsNum   int
 }
 
 var (
@@ -121,6 +122,8 @@ func (tc *Chat) OutMsgArgs(tmpl string, errText string) *outMsgTmplArgs {
 				args.WLFrgnLang = tc.WL.FrgnLang.Name
 			case "WLNtvLang":
 				args.WLNtvLang = tc.WL.NtvLang.Name
+			case "WordsNum":
+				args.WordsNum = tc.WL.WordsNum
 			}
 		}
 	}

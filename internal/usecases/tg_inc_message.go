@@ -54,8 +54,8 @@ func MapIncMsgToInner(r res.Resources, tc *tcPkg.Chat, upd *tgbotapi.Update) (ms
 	return msg
 }
 
-func DeleteMsgInTg(r res.Resources, chatId int64, msgId int) (err error) {
-	delMsg := tgbotapi.NewDeleteMessage(chatId, msgId)
+func DeleteMsgInTg(r res.Resources, chatId int, msgId int) (err error) {
+	delMsg := tgbotapi.NewDeleteMessage(int64(chatId), msgId)
 
 	_, err = r.TgBotAPI.Send(delMsg)
 

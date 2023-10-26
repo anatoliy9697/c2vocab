@@ -53,7 +53,7 @@ func (r pgRepo) SaveNew(u *usrPkg.User) error {
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id
 	`
-	var usrId int32
+	var usrId int
 	err = conn.QueryRow(r.ctx, sql,
 		u.TgId,
 		u.TgUserName,
@@ -84,7 +84,7 @@ func (r pgRepo) Update(u *usrPkg.User) error {
 		WHERE tg_id = $6
 		RETURNING id
 	`
-	var usrId int32
+	var usrId int
 	err = conn.QueryRow(r.ctx, sql,
 		u.TgUserName,
 		u.TgFirstName,

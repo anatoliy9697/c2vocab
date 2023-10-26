@@ -9,8 +9,8 @@ import (
 
 type Repo interface {
 	SaveNewWL(*wlPkg.WordList) error
-	ActiveWLByOwnerId(int32) ([]*wlPkg.WordList, error)
-	WLById(int32) (*wlPkg.WordList, error)
+	ActiveWLByOwnerId(int) ([]*wlPkg.WordList, error)
+	WLById(int) (*wlPkg.WordList, error)
 	UpdateWL(*wlPkg.WordList) error
 	SaveNewWord(*wlPkg.Word) error
 }

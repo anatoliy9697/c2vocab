@@ -7,20 +7,21 @@ import (
 )
 
 type WordList struct {
-	Id        int32         `json:"id"`
+	Id        int           `json:"id"`
 	Active    bool          `json:"active"`
 	Name      string        `json:"name"`
 	FrgnLang  *commons.Lang `json:"frgnLang"`
 	NtvLang   *commons.Lang `json:"ntvLang"`
-	OwnerId   int32         `json:"ownerId"`
+	WordsNum  int           `json:"wordsNum"`
+	OwnerId   int           `json:"ownerId"`
 	CreatedAt time.Time     `json:"createdAt"`
 }
 
 type Word struct {
-	Id        int32     `json:"id"`
+	Id        int       `json:"id"`
 	Foreign   string    `json:"foreign"`
 	Native    string    `json:"native"`
-	WLId      int32     `json:"wlId"`
+	WLId      int       `json:"wlId"`
 	CreatedAt time.Time `json:"createdAt"`
 }
 

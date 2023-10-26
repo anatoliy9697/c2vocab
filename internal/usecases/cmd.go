@@ -47,12 +47,9 @@ func CreateWL(r res.Resources, tc *tcPkg.Chat, wlName string) (err error) {
 }
 
 func SetTgChatWL(r res.Resources, tc *tcPkg.Chat, wlIdStr string) (err error) {
-	var id int
-	if id, err = strconv.Atoi(wlIdStr); err != nil {
+	if tc.WLId, err = strconv.Atoi(wlIdStr); err != nil {
 		return err
 	}
-
-	tc.WLId = int32(id)
 
 	if tc.WL, err = r.WLRepo.WLById(tc.WLId); err != nil {
 		return err
@@ -82,6 +79,8 @@ func CreateWord(r res.Resources, tc *tcPkg.Chat, wordNtv string) (err error) {
 	if err = r.WLRepo.SaveNewWord(w); err != nil {
 		return err
 	}
+
+	tc.WL.WordsNum++
 
 	tc.WordFrgn = ""
 

@@ -30,7 +30,7 @@ func (r pgRepo) SaveNewWL(wl *wlPkg.WordList) error {
 		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id
 	`
-	var wlId int32
+	var wlId int
 	err = conn.QueryRow(r.ctx, sql,
 		wl.Active,
 		wl.Name,
@@ -48,7 +48,7 @@ func (r pgRepo) SaveNewWL(wl *wlPkg.WordList) error {
 	return nil
 }
 
-func (r pgRepo) ActiveWLByOwnerId(ownerId int32) ([]*wlPkg.WordList, error) {
+func (r pgRepo) ActiveWLByOwnerId(ownerId int) ([]*wlPkg.WordList, error) {
 	conn, err := r.pool.Acquire(r.ctx)
 	if err != nil {
 		return nil, err
@@ -66,7 +66,7 @@ func (r pgRepo) ActiveWLByOwnerId(ownerId int32) ([]*wlPkg.WordList, error) {
 	}
 
 	wls := make([]*wlPkg.WordList, 0)
-	var id int32
+	var id int
 	var name, frgnLangCode, ntvLangCode string
 	var createdAt time.Time
 	for rows.Next() {
@@ -87,7 +87,7 @@ func (r pgRepo) ActiveWLByOwnerId(ownerId int32) ([]*wlPkg.WordList, error) {
 	return wls, nil
 }
 
-func (r pgRepo) WLById(id int32) (*wlPkg.WordList, error) {
+func (r pgRepo) WLById(id int) (*wlPkg.WordList, error) {
 	conn, err := r.pool.Acquire(r.ctx)
 	if err != nil {
 		return nil, err
@@ -95,19 +95,27 @@ func (r pgRepo) WLById(id int32) (*wlPkg.WordList, error) {
 	defer conn.Release()
 
 	sql := `
-		SELECT active, name, frgn_lang_code, ntv_lang_code, owner_id, created_at
+		SELECT
+			active
+			, name
+			, frgn_lang_code
+			, ntv_lang_code
+			, (SELECT COUNT(*) FROM c2v_word WHERE wl_id = $1) AS words_num
+			, owner_id
+			, created_at
 		FROM c2v_word_list
 		WHERE id = $1
 	`
 	var active bool
 	var name, frgnLangCode, ntvLangCode string
-	var ownerId int32
+	var wordsNum, ownerId int
 	var createdAt time.Time
 	err = conn.QueryRow(r.ctx, sql, id).Scan(
 		&active,
 		&name,
 		&frgnLangCode,
 		&ntvLangCode,
+		&wordsNum,
 		&ownerId,
 		&createdAt,
 	)
@@ -121,6 +129,7 @@ func (r pgRepo) WLById(id int32) (*wlPkg.WordList, error) {
 		Name:      name,
 		FrgnLang:  commons.LangByCode(frgnLangCode),
 		NtvLang:   commons.LangByCode(ntvLangCode),
+		WordsNum:  wordsNum,
 		OwnerId:   ownerId,
 		CreatedAt: createdAt,
 	}, nil
@@ -163,7 +172,7 @@ func (r pgRepo) SaveNewWord(w *wlPkg.Word) error {
 		VALUES ($1, $2, $3, $4)
 		RETURNING id
 	`
-	var wId int32
+	var wId int
 	err = conn.QueryRow(r.ctx, sql,
 		w.Foreign,
 		w.Native,
