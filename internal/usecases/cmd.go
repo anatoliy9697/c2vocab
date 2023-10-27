@@ -40,6 +40,23 @@ func CreateWL(r res.Resources, tc *tcPkg.Chat, wlName string) (err error) {
 		return err
 	}
 
+	tc.WL = wl
+
+	tc.WLFrgnLang = nil
+	tc.WLNtvLang = nil
+
+	return nil
+}
+
+func EditWL(r res.Resources, tc *tcPkg.Chat, wlName string) (err error) {
+	tc.WL.Name = wlName
+	tc.WL.FrgnLang = tc.WLFrgnLang
+	tc.WL.NtvLang = tc.WLNtvLang
+
+	if err = r.WLRepo.UpdateWL(tc.WL); err != nil {
+		return err
+	}
+
 	tc.WLFrgnLang = nil
 	tc.WLNtvLang = nil
 

@@ -64,33 +64,49 @@ func DeleteMsgInTg(r res.Resources, chatId int, msgId int) (err error) {
 
 func ProcessIncMsg(r res.Resources, tc *tcPkg.Chat, msg *tcPkg.IncMsg) (err error) {
 	switch {
+
+	// Start cmds
 	case msg.Cmd != nil && (msg.Cmd.Code == "start" || msg.Cmd.Code == "to_main_menu"):
 		ClearTgChaTmpFields(tc)
-	case msg.Cmd != nil && msg.Cmd.Code == "wl_frgn_lang":
+
+	// Word list control
+	case msg.Cmd != nil && (msg.Cmd.Code == "wl_creation_frgn_lang" || msg.Cmd.Code == "wl_edit_frgn_lang"):
 		SetTgChatWLFrgnLang(tc, msg.CmdArgs[0])
-	case msg.Cmd != nil && msg.Cmd.Code == "wl_ntv_lang":
+	case msg.Cmd != nil && (msg.Cmd.Code == "wl_creation_ntv_lang" || msg.Cmd.Code == "wl_edit_ntv_lang"):
 		SetTgChatWLNtvLang(tc, msg.CmdArgs[0])
-	case msg.Cmd != nil && msg.Cmd.Code == "wl":
-		if err = SetTgChatWL(r, tc, msg.CmdArgs[0]); err != nil {
+	case msg.Text != "" && tc.State.Code == "wl_creation_name":
+		if err = CreateWL(r, tc, msg.Text); err != nil {
+			return err
+		}
+	case msg.Text != "" && tc.State.Code == "wl_edit_name":
+		if err = EditWL(r, tc, msg.Text); err != nil {
 			return err
 		}
 	case msg.Cmd != nil && msg.Cmd.Code == "confirm_wl_del":
 		if err = DeleteWL(r, tc.WL); err != nil {
 			return err
 		}
-	case msg.Cmd != nil && msg.Cmd.Code == "back_to_wl":
-		BackToWL(tc)
-	case msg.Text != "" && tc.State.WaitForWLName:
-		if err = CreateWL(r, tc, msg.Text); err != nil {
+
+	// Word list selecting
+	case msg.Cmd != nil && msg.Cmd.Code == "wl":
+		if err = SetTgChatWL(r, tc, msg.CmdArgs[0]); err != nil {
 			return err
 		}
+
+	// Word control
 	case msg.Text != "" && tc.State.WaitForWFrgn:
 		SetTgChatWordFrgn(tc, msg.Text)
 	case msg.Text != "" && tc.State.WaitForWNtv:
 		if err = CreateWord(r, tc, msg.Text); err != nil {
 			return err
 		}
+
+	// Navigation
+	case msg.Cmd != nil && msg.Cmd.Code == "back_to_wl":
+		BackToWL(tc)
+
 	default:
+
 	}
 
 	return nil
