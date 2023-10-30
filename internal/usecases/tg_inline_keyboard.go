@@ -55,6 +55,23 @@ func AllWLTgInlineKeyboard(r res.Resources, tc *tcPkg.Chat) (ikRows [][]tgbotapi
 	return ikRows, nil
 }
 
+func AllWordsTgInlineKeyboard(r res.Resources, tc *tcPkg.Chat) (ikRows [][]tgbotapi.InlineKeyboardButton, err error) {
+	var words []*wlPkg.Word
+	if words, err = r.WLRepo.ActiveWordsByWLId(tc.WL.Id); err != nil {
+		return nil, err
+	}
+
+	var ikRow []tgbotapi.InlineKeyboardButton
+	i := 1
+	for _, word := range words {
+		ikRow = []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(strconv.Itoa(i)+". \""+word.Foreign+"\" - \""+word.Native+"\"", tc.State.StateCmd.Code+" "+strconv.Itoa(int(word.Id)))}
+		ikRows = append(ikRows, ikRow)
+		i++
+	}
+
+	return ikRows, nil
+}
+
 func TgInlineKeyboradStateCmdRows(r res.Resources, tc *tcPkg.Chat) (ikRows [][]tgbotapi.InlineKeyboardButton, err error) {
 	switch {
 	case tc.State.WaitForWLFrgnLang:
@@ -63,6 +80,10 @@ func TgInlineKeyboradStateCmdRows(r res.Resources, tc *tcPkg.Chat) (ikRows [][]t
 		ikRows = WLNtvLangTgInlineKeyboard(tc)
 	case tc.State.StateCmd != nil && tc.State.StateCmd.Code == "wl":
 		if ikRows, err = AllWLTgInlineKeyboard(r, tc); err != nil {
+			return nil, err
+		}
+	case tc.State.StateCmd != nil && tc.State.StateCmd.Code == "w":
+		if ikRows, err = AllWordsTgInlineKeyboard(r, tc); err != nil {
 			return nil, err
 		}
 	}

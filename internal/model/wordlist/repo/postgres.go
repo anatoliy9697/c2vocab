@@ -168,8 +168,8 @@ func (r pgRepo) SaveNewWord(w *wlPkg.Word) error {
 	defer conn.Release()
 
 	sql := `
-		INSERT INTO c2v_word (frgn, ntv, wl_id, created_at)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO c2v_word (frgn, ntv, wl_id, active, created_at)
+		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id
 	`
 	var wId int
@@ -177,6 +177,7 @@ func (r pgRepo) SaveNewWord(w *wlPkg.Word) error {
 		w.Foreign,
 		w.Native,
 		w.WLId,
+		true,
 		w.CreatedAt,
 	).Scan(&wId)
 	if err != nil {
@@ -186,4 +187,42 @@ func (r pgRepo) SaveNewWord(w *wlPkg.Word) error {
 	w.Id = wId
 
 	return nil
+}
+
+func (r pgRepo) ActiveWordsByWLId(wlId int) ([]*wlPkg.Word, error) {
+	conn, err := r.pool.Acquire(r.ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	sql := `
+		SELECT id, frgn, ntv, created_at
+		FROM c2v_word
+		WHERE wl_id = $1 AND active IS TRUE
+	`
+	rows, err := conn.Query(r.ctx, sql, wlId)
+	if err != nil {
+		return nil, err
+	}
+
+	words := make([]*wlPkg.Word, 0)
+	var id int
+	var frgn, ntv string
+	var createdAt time.Time
+	for rows.Next() {
+		if err = rows.Scan(&id, &frgn, &ntv, &createdAt); err != nil {
+			return nil, err
+		}
+		words = append(words, &wlPkg.Word{
+			Id:        id,
+			Foreign:   frgn,
+			Native:    ntv,
+			WLId:      wlId,
+			Active:    true,
+			CreatedAt: createdAt,
+		})
+	}
+
+	return words, nil
 }

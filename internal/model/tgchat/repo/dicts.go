@@ -28,6 +28,10 @@ var cmds = map[string]*tcPkg.Cmd{
 
 	"add_w":      {Code: "add_w", DisplayLabel: "📝 Добавить слово", DestStateCode: "w_addition_frgn"},
 	"back_to_wl": {Code: "back_to_wl", DisplayLabel: "⬅️ Назад к списку слов", DestStateCode: "wl"},
+
+	"w": {Code: "w", DestStateCode: "w"},
+
+	"all_w": {Code: "all_w", DisplayLabel: "📋 Все слова списка", DestStateCode: "all_w"},
 }
 
 var states = map[string]*tcPkg.State{
@@ -42,7 +46,7 @@ var states = map[string]*tcPkg.State{
 	"wl_edit_ntv_lang":      {Code: "wl_edit_ntv_lang", MsgHdr: "Редактирование списка слов", MsgBody: "Выберите родной (базовый) язык", WaitForWLNtvLang: true, StateCmd: cmds["wl_edit_ntv_lang"], AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
 	"wl_edit_name":          {Code: "wl_edit_name", MsgHdr: "Редактирование списка слов", MsgBody: "Введите название списка", WaitForWLName: true, NextStateCode: "wl", AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
 
-	"wl": {Code: "wl", MsgHdr: "Список слов \"{{.WLName}}\"", MsgBody: "Изучаемый язык: {{.WLFrgnLang}}\nБазовый язык: {{.WLNtvLang}}\nВсего слов: {{.WordsNum}} шт.", AvailCmds: [][]*tcPkg.Cmd{{cmds["add_w"]}, {cmds["delete_wl"], cmds["edit_wl"]}, {cmds["to_main_menu"]}}},
+	"wl": {Code: "wl", MsgHdr: "Список слов \"{{.WLName}}\"", MsgBody: "Изучаемый язык: {{.WLFrgnLang}}\nБазовый язык: {{.WLNtvLang}}\nВсего слов: {{.WordsNum}} шт.", AvailCmds: [][]*tcPkg.Cmd{{cmds["all_w"]}, {cmds["add_w"]}, {cmds["delete_wl"], cmds["edit_wl"]}, {cmds["to_main_menu"]}}},
 
 	"all_wl": {Code: "all_wl", MsgHdr: "Мои списки", StateCmd: cmds["wl"], AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
 
@@ -50,4 +54,6 @@ var states = map[string]*tcPkg.State{
 
 	"w_addition_frgn": {Code: "w_addition_frgn", MsgHdr: "Новое слово списка \"{{.WLName}}\"", MsgBody: "Введите слово на изучаемом языке ({{.WLFrgnLang}})", WaitForWFrgn: true, NextStateCode: "w_addition_ntv", AvailCmds: [][]*tcPkg.Cmd{{cmds["back_to_wl"]}, {cmds["to_main_menu"]}}},
 	"w_addition_ntv":  {Code: "w_addition_ntv", MsgHdr: "Новое слово списка \"{{.WLName}}\"", MsgBody: "Введите перевод слова на базовом языке ({{.WLNtvLang}})", WaitForWNtv: true, NextStateCode: "wl", AvailCmds: [][]*tcPkg.Cmd{{cmds["back_to_wl"]}, {cmds["to_main_menu"]}}},
+
+	"all_w": {Code: "all_w", MsgHdr: "Слова списка \"{{.WLName}}\"", StateCmd: cmds["w"], AvailCmds: [][]*tcPkg.Cmd{{cmds["back_to_wl"]}, {cmds["to_main_menu"]}}},
 }

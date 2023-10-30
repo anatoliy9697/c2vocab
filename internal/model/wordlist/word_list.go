@@ -22,6 +22,7 @@ type Word struct {
 	Foreign   string    `json:"foreign"`
 	Native    string    `json:"native"`
 	WLId      int       `json:"wlId"`
+	Active    bool      `json:"active"`
 	CreatedAt time.Time `json:"createdAt"`
 }
 

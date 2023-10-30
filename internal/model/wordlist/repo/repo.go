@@ -13,6 +13,7 @@ type Repo interface {
 	WLById(int) (*wlPkg.WordList, error)
 	UpdateWL(*wlPkg.WordList) error
 	SaveNewWord(*wlPkg.Word) error
+	ActiveWordsByWLId(int) ([]*wlPkg.Word, error)
 }
 
 func Init(c context.Context, p *pgxpool.Pool) Repo {
