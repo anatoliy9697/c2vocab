@@ -62,7 +62,7 @@ func DeleteMsgInTg(r res.Resources, chatId int, msgId int) (err error) {
 	return err
 }
 
-func ProcessIncMsg(r res.Resources, tc *tcPkg.Chat, msg *tcPkg.IncMsg) (err error) {
+func ProcessIncMsg(r res.Resources, tc *tcPkg.Chat, msg *tcPkg.IncMsg) (err error) { // TODO: навести порядок в case'ах
 	switch {
 
 	// Start cmds
@@ -100,10 +100,22 @@ func ProcessIncMsg(r res.Resources, tc *tcPkg.Chat, msg *tcPkg.IncMsg) (err erro
 		if err = CreateWord(r, tc, msg.Text); err != nil {
 			return err
 		}
+	case msg.Cmd != nil && msg.Cmd.Code == "confirm_w_del":
+		if err = DeleteWord(r, tc.Word); err != nil {
+			return err
+		}
+
+	// Word selecting
+	case msg.Cmd != nil && msg.Cmd.Code == "w":
+		if err = SetTgChatWord(r, tc, msg.CmdArgs[0]); err != nil {
+			return err
+		}
 
 	// Navigation
 	case msg.Cmd != nil && msg.Cmd.Code == "back_to_wl":
 		BackToWL(tc)
+	case msg.Cmd != nil && msg.Cmd.Code == "back_to_all_w":
+		BackToAllWords(tc)
 
 	default:
 

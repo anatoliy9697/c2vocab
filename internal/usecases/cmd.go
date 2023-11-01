@@ -16,6 +16,8 @@ func ClearTgChaTmpFields(tc *tcPkg.Chat) {
 	tc.WLId = 0
 	tc.WL = nil
 	tc.WordFrgn = ""
+	tc.WordId = 0
+	tc.Word = nil
 }
 
 func SetTgChatWLFrgnLang(tc *tcPkg.Chat, langCode string) {
@@ -106,4 +108,27 @@ func CreateWord(r res.Resources, tc *tcPkg.Chat, wordNtv string) (err error) {
 
 func BackToWL(tc *tcPkg.Chat) {
 	tc.WordFrgn = ""
+}
+
+func SetTgChatWord(r res.Resources, tc *tcPkg.Chat, wordIdStr string) (err error) {
+	if tc.WordId, err = strconv.Atoi(wordIdStr); err != nil {
+		return err
+	}
+
+	if tc.Word, err = r.WLRepo.WordById(tc.WordId); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func BackToAllWords(tc *tcPkg.Chat) {
+	tc.WordId = 0
+	tc.Word = nil
+}
+
+func DeleteWord(r res.Resources, w *wlPkg.Word) (err error) {
+	w.Deactivate()
+
+	return r.WLRepo.UpdateWord(w)
 }

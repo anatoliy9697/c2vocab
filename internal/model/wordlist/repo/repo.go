@@ -14,6 +14,8 @@ type Repo interface {
 	UpdateWL(*wlPkg.WordList) error
 	SaveNewWord(*wlPkg.Word) error
 	ActiveWordsByWLId(int) ([]*wlPkg.Word, error)
+	WordById(int) (*wlPkg.Word, error)
+	UpdateWord(*wlPkg.Word) error
 }
 
 func Init(c context.Context, p *pgxpool.Pool) Repo {

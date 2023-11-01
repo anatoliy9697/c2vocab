@@ -23,6 +23,8 @@ type Chat struct {
 	WLId         int             `json:"wlId"`
 	WL           *wlPkg.WordList `json:"wl"`
 	WordFrgn     string          `json:"wordFrgn"`
+	WordId       int             `json:"wordId"`
+	Word         *wlPkg.Word     `json:"word"`
 	BotLastMsgId int             `json:"botLastMsgId"`
 }
 
@@ -66,13 +68,15 @@ type IncMsg struct {
 }
 
 type outMsgTmplArgs struct {
-	ErrText    string
-	WLName     string
-	UsrTgFName string
-	UsrTgLName string
-	WLFrgnLang string
-	WLNtvLang  string
-	WordsNum   int
+	ErrText     string
+	WLName      string
+	UsrTgFName  string
+	UsrTgLName  string
+	WLFrgnLang  string
+	WLNtvLang   string
+	WordsNum    int
+	WordForeign string
+	WordNative  string
 }
 
 var (
@@ -124,6 +128,10 @@ func (tc *Chat) OutMsgArgs(tmpl string, errText string) *outMsgTmplArgs {
 				args.WLNtvLang = tc.WL.NtvLang.Name
 			case "WordsNum":
 				args.WordsNum = tc.WL.WordsNum
+			case "WordForeign":
+				args.WordForeign = tc.Word.Foreign
+			case "WordNative":
+				args.WordNative = tc.Word.Native
 			}
 		}
 	}

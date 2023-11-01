@@ -35,6 +35,12 @@ func MapToInnerTgChatAndSave(r res.Resources, outerTC *tgbotapi.Chat, u *usrPkg.
 		}
 	}
 
+	if tc.WordId != 0 {
+		if tc.Word, err = r.WLRepo.WordById(tc.WordId); err != nil {
+			return nil, err
+		}
+	}
+
 	return tc, nil
 }
 

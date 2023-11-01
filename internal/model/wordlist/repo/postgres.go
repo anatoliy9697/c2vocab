@@ -100,7 +100,7 @@ func (r pgRepo) WLById(id int) (*wlPkg.WordList, error) {
 			, name
 			, frgn_lang_code
 			, ntv_lang_code
-			, (SELECT COUNT(*) FROM c2v_word WHERE wl_id = $1) AS words_num
+			, (SELECT COUNT(*) FROM c2v_word WHERE wl_id = $1 AND active IS TRUE) AS words_num
 			, owner_id
 			, created_at
 		FROM c2v_word_list
@@ -225,4 +225,66 @@ func (r pgRepo) ActiveWordsByWLId(wlId int) ([]*wlPkg.Word, error) {
 	}
 
 	return words, nil
+}
+
+func (r pgRepo) WordById(id int) (*wlPkg.Word, error) {
+	conn, err := r.pool.Acquire(r.ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	sql := `
+		SELECT
+			active
+			, frgn
+			, ntv
+			, created_at
+		FROM c2v_word
+		WHERE id = $1
+	`
+	var active bool
+	var frgn, ntv string
+	var createdAt time.Time
+	err = conn.QueryRow(r.ctx, sql, id).Scan(
+		&active,
+		&frgn,
+		&ntv,
+		&createdAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &wlPkg.Word{
+		Id:        id,
+		Active:    active,
+		Foreign:   frgn,
+		Native:    ntv,
+		CreatedAt: createdAt,
+	}, nil
+}
+
+func (r pgRepo) UpdateWord(w *wlPkg.Word) error {
+	conn, err := r.pool.Acquire(r.ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	sql := `
+		UPDATE c2v_word SET (active, frgn, ntv) = ($1, $2, $3)
+		WHERE id = $4
+	`
+	_, err = conn.Exec(r.ctx, sql,
+		w.Active,
+		w.Foreign,
+		w.Native,
+		w.Id,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

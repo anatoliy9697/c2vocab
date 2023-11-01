@@ -29,3 +29,7 @@ type Word struct {
 func (wl *WordList) Deactivate() {
 	wl.Active = false
 }
+
+func (w *Word) Deactivate() {
+	w.Active = false
+}

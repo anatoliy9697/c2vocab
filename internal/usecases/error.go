@@ -34,6 +34,10 @@ func ProcessErr(r res.Resources, tc *tcPkg.Chat, usr *usrPkg.User, err error) {
 				tc.WL, _ = r.WLRepo.WLById(tc.WLId)
 			}
 
+			if tc.WordId != 0 {
+				tc.Word, _ = r.WLRepo.WordById(tc.WordId)
+			}
+
 			// Sending replay message, got by non-changed by current request, tgChat state with error info
 			tc.BotLastMsgId = prevBotLastMsgId
 			SendReplyMsg(r, tc, errText)
