@@ -62,14 +62,26 @@ func DeleteMsgInTg(r res.Resources, chatId int, msgId int) (err error) {
 	return err
 }
 
-func ProcessIncMsg(r res.Resources, tc *tcPkg.Chat, msg *tcPkg.IncMsg) (err error) { // TODO: навести порядок в case'ах
+func ProcessIncMsg(r res.Resources, tc *tcPkg.Chat, msg *tcPkg.IncMsg) (err error) {
 	switch {
 
-	// Start cmds
+	// Navigation
 	case msg.Cmd != nil && (msg.Cmd.Code == "start" || msg.Cmd.Code == "to_main_menu"):
 		ClearTgChaTmpFields(tc)
+	case msg.Cmd != nil && msg.Cmd.Code == "wl":
+		if err = SetTgChatWL(r, tc, msg.CmdArgs[0]); err != nil {
+			return err
+		}
+	case msg.Cmd != nil && msg.Cmd.Code == "w":
+		if err = SetTgChatWord(r, tc, msg.CmdArgs[0]); err != nil {
+			return err
+		}
+	case msg.Cmd != nil && msg.Cmd.Code == "back_to_wl":
+		BackToWL(tc)
+	case msg.Cmd != nil && msg.Cmd.Code == "back_to_all_w":
+		BackToAllWords(tc)
 
-	// Word list control
+	// Word list
 	case msg.Cmd != nil && (msg.Cmd.Code == "wl_creation_frgn_lang" || msg.Cmd.Code == "wl_edit_frgn_lang"):
 		SetTgChatWLFrgnLang(tc, msg.CmdArgs[0])
 	case msg.Cmd != nil && (msg.Cmd.Code == "wl_creation_ntv_lang" || msg.Cmd.Code == "wl_edit_ntv_lang"):
@@ -87,12 +99,6 @@ func ProcessIncMsg(r res.Resources, tc *tcPkg.Chat, msg *tcPkg.IncMsg) (err erro
 			return err
 		}
 
-	// Word list selecting
-	case msg.Cmd != nil && msg.Cmd.Code == "wl":
-		if err = SetTgChatWL(r, tc, msg.CmdArgs[0]); err != nil {
-			return err
-		}
-
 	// Word control
 	case msg.Text != "" && tc.State.WaitForWFrgn:
 		SetTgChatWordFrgn(tc, msg.Text)
@@ -104,18 +110,6 @@ func ProcessIncMsg(r res.Resources, tc *tcPkg.Chat, msg *tcPkg.IncMsg) (err erro
 		if err = DeleteWord(r, tc.Word); err != nil {
 			return err
 		}
-
-	// Word selecting
-	case msg.Cmd != nil && msg.Cmd.Code == "w":
-		if err = SetTgChatWord(r, tc, msg.CmdArgs[0]); err != nil {
-			return err
-		}
-
-	// Navigation
-	case msg.Cmd != nil && msg.Cmd.Code == "back_to_wl":
-		BackToWL(tc)
-	case msg.Cmd != nil && msg.Cmd.Code == "back_to_all_w":
-		BackToAllWords(tc)
 
 	default:
 

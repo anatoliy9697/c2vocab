@@ -5,9 +5,8 @@ import (
 )
 
 var cmds = map[string]*tcPkg.Cmd{
-	"start": {Code: "start", DestStateCode: "main_menu"},
-
 	// Navigation
+	"start":         {Code: "start", DestStateCode: "main_menu"},
 	"to_main_menu":  {Code: "to_main_menu", DisplayLabel: "⬅️ В главное меню", DestStateCode: "main_menu"},
 	"all_wl":        {Code: "all_wl", DisplayLabel: "🗂 Мои списки", DestStateCode: "all_wl"},
 	"wl":            {Code: "wl", DestStateCode: "wl"},

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -14,12 +15,18 @@ import (
 	res "github.com/anatoliy9697/c2vocab/internal/resources"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/spf13/viper"
 )
 
 func main() {
 	var err error
 
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})) // TODO: Вынести определение уровня логирования в параметры окружения или в конфиг
+	viper.SetConfigFile("./config/config.yaml")
+	if err = viper.ReadInConfig(); err != nil {
+		log.Fatal("reading config file fatal error: " + err.Error())
+	}
+
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.Level(viper.GetInt("log_level"))}))
 
 	defer func() {
 		if err != nil {
@@ -61,10 +68,10 @@ func main() {
 	}
 	efDone := make(chan struct{})
 	go control.EventFetcher{
-		TgBotUpdsOffset:       0,
-		TgBotUpdsTimeout:      30,
-		MaxEventHandlers:      10,
-		WaitForHandlerTimeout: 100,
+		TgBotUpdsOffset:       viper.GetInt("tg_bot_upds_offset"),
+		TgBotUpdsTimeout:      viper.GetInt("tg_bot_upds_timeout"),
+		MaxEventHandlers:      viper.GetInt("max_event_handlers"),
+		WaitForHandlerTimeout: viper.GetInt("wait_for_handler_timeout"),
 		Res:                   res,
 	}.Run(mainCtx, efDone)
 

@@ -1,0 +1,5 @@
+log_level:                -4
+tg_bot_upds_offset:       0
+tg_bot_upds_timeout:      30
+max_event_handlers:       10
+wait_for_handler_timeout: 100 # ms
