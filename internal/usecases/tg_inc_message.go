@@ -68,29 +68,25 @@ func ProcessIncMsg(r res.Resources, tc *tcPkg.Chat, msg *tcPkg.IncMsg) (err erro
 	// Navigation
 	case msg.Cmd != nil && (msg.Cmd.Code == "start" || msg.Cmd.Code == "to_main_menu"):
 		ClearTgChaTmpFields(tc)
-	case msg.Cmd != nil && msg.Cmd.Code == "wl":
-		if err = SetTgChatWL(r, tc, msg.CmdArgs[0]); err != nil {
-			return err
-		}
-	case msg.Cmd != nil && msg.Cmd.Code == "w":
-		if err = SetTgChatWord(r, tc, msg.CmdArgs[0]); err != nil {
-			return err
-		}
 	case msg.Cmd != nil && msg.Cmd.Code == "back_to_wl":
 		BackToWL(tc)
 	case msg.Cmd != nil && msg.Cmd.Code == "back_to_all_w":
 		BackToAllWords(tc)
 
 	// Word list
-	case msg.Cmd != nil && (msg.Cmd.Code == "wl_creation_frgn_lang" || msg.Cmd.Code == "wl_edit_frgn_lang"):
+	case msg.Cmd != nil && msg.Cmd.Code == "wl":
+		if err = SetTgChatWL(r, tc, msg.CmdArgs[0]); err != nil {
+			return err
+		}
+	case msg.Cmd != nil && (msg.Cmd.Code == "wl_creation_frgn_lang" || msg.Cmd.Code == "wl_editing_frgn_lang"):
 		SetTgChatWLFrgnLang(tc, msg.CmdArgs[0])
-	case msg.Cmd != nil && (msg.Cmd.Code == "wl_creation_ntv_lang" || msg.Cmd.Code == "wl_edit_ntv_lang"):
+	case msg.Cmd != nil && (msg.Cmd.Code == "wl_creation_ntv_lang" || msg.Cmd.Code == "wl_editing_ntv_lang"):
 		SetTgChatWLNtvLang(tc, msg.CmdArgs[0])
 	case msg.Text != "" && tc.State.Code == "wl_creation_name":
 		if err = CreateWL(r, tc, msg.Text); err != nil {
 			return err
 		}
-	case msg.Text != "" && tc.State.Code == "wl_edit_name":
+	case msg.Text != "" && tc.State.Code == "wl_editing_name":
 		if err = EditWL(r, tc, msg.Text); err != nil {
 			return err
 		}
@@ -100,9 +96,13 @@ func ProcessIncMsg(r res.Resources, tc *tcPkg.Chat, msg *tcPkg.IncMsg) (err erro
 		}
 
 	// Word control
-	case msg.Text != "" && tc.State.WaitForWFrgn:
+	case msg.Cmd != nil && msg.Cmd.Code == "w":
+		if err = SetTgChatWord(r, tc, msg.CmdArgs[0]); err != nil {
+			return err
+		}
+	case msg.Text != "" && tc.State.Code == "w_addition_frgn":
 		SetTgChatWordFrgn(tc, msg.Text)
-	case msg.Text != "" && tc.State.WaitForWNtv:
+	case msg.Text != "" && tc.State.Code == "w_addition_ntv":
 		if err = CreateWord(r, tc, msg.Text); err != nil {
 			return err
 		}

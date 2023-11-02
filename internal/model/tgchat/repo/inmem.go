@@ -43,3 +43,13 @@ func (r pgRepo) CmdByCode(c string) (*tcPkg.Cmd, error) {
 
 	return cmd, nil
 }
+
+func (e pgRepo) AllExercises() []*tcPkg.Excersice {
+	xrcses := make([]*tcPkg.Excersice, len(exercises))
+	i := 0
+	for _, xrcs := range exercises {
+		xrcses[i] = xrcs
+		i++
+	}
+	return xrcses
+}

@@ -42,6 +42,7 @@ func CreateWL(r res.Resources, tc *tcPkg.Chat, wlName string) (err error) {
 		return err
 	}
 
+	tc.WLId = wl.Id
 	tc.WL = wl
 
 	tc.WLFrgnLang = nil

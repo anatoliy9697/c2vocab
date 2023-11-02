@@ -29,25 +29,26 @@ type Chat struct {
 }
 
 type State struct {
-	Code              string             `json:"code"`
-	MsgHdr            string             `json:"-"`
-	MsgBody           string             `json:"-"`
-	MsgFtr            string             `json:"-"`
-	MsgTmpl           *template.Template `json:"-"`
-	WaitForWLFrgnLang bool               `json:"-"`
-	WaitForWLNtvLang  bool               `json:"-"`
-	WaitForWLName     bool               `json:"-"`
-	WaitForWFrgn      bool               `json:"-"`
-	WaitForWNtv       bool               `json:"-"`
-	StateCmd          *Cmd               `json:"-"`
-	NextStateCode     string             `json:"-"`
-	AvailCmds         [][]*Cmd           `json:"-"`
+	Code             string             `json:"code"`
+	MsgHdr           string             `json:"-"`
+	MsgBody          string             `json:"-"`
+	MsgFtr           string             `json:"-"`
+	MsgTmpl          *template.Template `json:"-"`
+	WaitForDataInput bool               `json:"-"`
+	StateCmd         *Cmd               `json:"-"`
+	NextStateCode    string             `json:"-"`
+	AvailCmds        [][]*Cmd           `json:"-"`
 }
 
 type Cmd struct {
 	Code          string `json:"code"`
 	DisplayLabel  string `json:"-"`
 	DestStateCode string `json:"-"`
+}
+
+type Excersice struct {
+	Code string `json:"code"`
+	Name string `json:"name"`
 }
 
 type IncMsgValidationErr struct {
@@ -153,7 +154,7 @@ func (tc *Chat) OutMsgText(errText string) (string, error) {
 }
 
 func (s State) OutMsgTmplContent() string {
-	msgTmpl := "{{.ErrText}}" + s.MsgBody
+	msgTmpl := s.MsgBody
 	if s.MsgHdr != "" {
 		msgTmpl = s.MsgHdr + "\n\n" + msgTmpl
 	}
@@ -161,11 +162,11 @@ func (s State) OutMsgTmplContent() string {
 		msgTmpl += "\n\n" + s.MsgFtr
 	}
 
-	return msgTmpl
+	return "{{.ErrText}}" + msgTmpl
 }
 
 func (s State) IsWaitForDataInput() bool {
-	return s.WaitForWLName || s.WaitForWFrgn || s.WaitForWNtv
+	return s.WaitForDataInput
 }
 
 func (s State) IsCmdAvail(cmdCode string) bool {
@@ -184,7 +185,7 @@ func (s State) IsCmdAvail(cmdCode string) bool {
 	return false
 }
 
-func (s State) TgInlineKeyboradAvailCmdsRows() [][]tgbotapi.InlineKeyboardButton {
+func (s State) TgInlineKeyboradAvailCmdsRows() [][]tgbotapi.InlineKeyboardButton { // TODO: Не отображать некоторые недоступные кнопки
 	inlineKeyboardRows := make([][]tgbotapi.InlineKeyboardButton, len(s.AvailCmds))
 	for i, cmdsRow := range s.AvailCmds {
 		inlineKeyboardRows[i] = make([]tgbotapi.InlineKeyboardButton, len(cmdsRow))
