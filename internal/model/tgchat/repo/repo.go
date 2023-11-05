@@ -15,6 +15,7 @@ type Repo interface {
 	UpdateTgChat(*tcPkg.Chat) error
 	CmdByCode(string) (*tcPkg.Cmd, error)
 	AllExercises() []*tcPkg.Excersice
+	ExcersiceByCode(string) (*tcPkg.Excersice, error)
 }
 
 func Init(c context.Context, p *pgxpool.Pool) (Repo, error) {

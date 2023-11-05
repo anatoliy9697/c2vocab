@@ -36,7 +36,7 @@ func MapIncMsgToInner(r res.Resources, tc *tcPkg.Chat, upd *tgbotapi.Update) (ms
 			}
 		} else {
 			msg.Text = upd.Message.Text
-			if !tc.State.IsWaitForDataInput() {
+			if !tc.IsWaitForDataInput() {
 				msg.ValidationErr = &tcPkg.ErrUnexpectedDataInput
 				return msg
 			}
@@ -68,10 +68,14 @@ func ProcessIncMsg(r res.Resources, tc *tcPkg.Chat, msg *tcPkg.IncMsg) (err erro
 	// Navigation
 	case msg.Cmd != nil && (msg.Cmd.Code == "start" || msg.Cmd.Code == "to_main_menu"):
 		ClearTgChaTmpFields(tc)
+	case msg.Cmd != nil && msg.Cmd.Code == "back_to_all_wl":
+		ClearWLFields(tc)
 	case msg.Cmd != nil && msg.Cmd.Code == "back_to_wl":
-		BackToWL(tc)
+		ClearWordCreationFields(tc)
 	case msg.Cmd != nil && msg.Cmd.Code == "back_to_all_w":
-		BackToAllWords(tc)
+		ClearWordFields(tc)
+	case msg.Cmd != nil && msg.Cmd.Code == "finish_xrcs":
+		ClearExerciseFields(tc)
 
 	// Word list
 	case msg.Cmd != nil && msg.Cmd.Code == "wl":
@@ -108,6 +112,16 @@ func ProcessIncMsg(r res.Resources, tc *tcPkg.Chat, msg *tcPkg.IncMsg) (err erro
 		}
 	case msg.Cmd != nil && msg.Cmd.Code == "confirm_w_del":
 		if err = DeleteWord(r, tc.Word); err != nil {
+			return err
+		}
+
+	// Learning
+	case msg.Cmd != nil && msg.Cmd.Code == "xrcs":
+		if err = SetTgChatExercise(r, tc, msg.CmdArgs[0]); err != nil {
+			return err
+		}
+	case msg.Text != "" && tc.State.Code == "xrcs":
+		if err = ProcessUserTaskDataInput(r, tc, msg.Text); err != nil {
 			return err
 		}
 

@@ -6,10 +6,12 @@ import (
 
 var cmds = map[string]*tcPkg.Cmd{
 	// Navigation
-	"start":         {Code: "start", DestStateCode: "main_menu"},
-	"to_main_menu":  {Code: "to_main_menu", DisplayLabel: "⬅️ В главное меню", DestStateCode: "main_menu"},
-	"back_to_wl":    {Code: "back_to_wl", DisplayLabel: "⬅️ Назад", DestStateCode: "wl"},
-	"back_to_all_w": {Code: "back_to_all_w", DisplayLabel: "⬅️ Назад", DestStateCode: "all_w"},
+	"start":          {Code: "start", DestStateCode: "main_menu"},
+	"to_main_menu":   {Code: "to_main_menu", DisplayLabel: "⬅️ В главное меню", DestStateCode: "main_menu"},
+	"back_to_all_wl": {Code: "back_to_all_wl", DisplayLabel: "⬅️ Назад", DestStateCode: "all_wl"},
+	"back_to_wl":     {Code: "back_to_wl", DisplayLabel: "⬅️ Назад", DestStateCode: "wl"},
+	"back_to_all_w":  {Code: "back_to_all_w", DisplayLabel: "⬅️ Назад", DestStateCode: "all_w"},
+	"finish_xrcs":    {Code: "finish_xrcs", DisplayLabel: "🏁 Закончить", DestStateCode: "wl"},
 
 	// Word list
 	"wl":                    {Code: "wl", DestStateCode: "wl"},
@@ -28,15 +30,15 @@ var cmds = map[string]*tcPkg.Cmd{
 
 	// Word
 	"w":             {Code: "w", DestStateCode: "w"},
-	"all_w":         {Code: "all_w", DisplayLabel: "📋 Все слова списка", DestStateCode: "all_w"},
+	"all_w":         {Code: "all_w", DisplayLabel: "📋 Все слова списка", DestStateCode: "all_w", NotEmptyWLOnly: true},
 	"add_w":         {Code: "add_w", DisplayLabel: "📝 Добавить слово", DestStateCode: "w_addition_frgn"},
 	"delete_w":      {Code: "delete_w", DisplayLabel: "❌ Удалить", DestStateCode: "w_del_confirmation"},
 	"confirm_w_del": {Code: "confirm_w_del", DisplayLabel: "✅ Да", DestStateCode: "all_w"},
 	"reject_w_del":  {Code: "reject_w_del", DisplayLabel: "❌ Нет", DestStateCode: "w"},
 
 	// Learning
-	"learn_wl": {Code: "learn_wl", DisplayLabel: "🧠 Учить", DestStateCode: "all_exercises"},
-	"xrcs":     {Code: "xrcs", DestStateCode: ""}, // TODO: deststatecode
+	"learn_wl": {Code: "learn_wl", DisplayLabel: "🧠 Учить", DestStateCode: "all_exercises", NotEmptyWLOnly: true},
+	"xrcs":     {Code: "xrcs", DestStateCode: "xrcs"},
 }
 
 var states = map[string]*tcPkg.State{
@@ -45,7 +47,7 @@ var states = map[string]*tcPkg.State{
 	"main_menu": {Code: "main_menu", MsgHdr: "Главное меню", MsgBody: "Привет, {{.UsrTgFName}} {{.UsrTgLName}}!", AvailCmds: [][]*tcPkg.Cmd{{cmds["create_wl"], cmds["all_wl"]}}},
 
 	// Word list
-	"wl":                    {Code: "wl", MsgHdr: "Список слов \"{{.WLName}}\"", MsgBody: "Изучаемый язык: {{.WLFrgnLang}}\nБазовый язык: {{.WLNtvLang}}\nВсего слов: {{.WordsNum}} шт.", AvailCmds: [][]*tcPkg.Cmd{{cmds["learn_wl"]}, {cmds["all_w"]}, {cmds["add_w"]}, {cmds["delete_wl"], cmds["edit_wl"]}, {cmds["to_main_menu"]}}},
+	"wl":                    {Code: "wl", MsgHdr: "Список слов \"{{.WLName}}\"", MsgBody: "Изучаемый язык: {{.WLFrgnLang}}\nБазовый язык: {{.WLNtvLang}}\nВсего слов: {{.WordsNum}} шт.", AvailCmds: [][]*tcPkg.Cmd{{cmds["learn_wl"]}, {cmds["all_w"]}, {cmds["add_w"]}, {cmds["delete_wl"], cmds["edit_wl"]}, {cmds["back_to_all_wl"]}, {cmds["to_main_menu"]}}},
 	"all_wl":                {Code: "all_wl", MsgHdr: "Мои списки", StateCmd: cmds["wl"], AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
 	"wl_creation_frgn_lang": {Code: "wl_creation_frgn_lang", MsgHdr: "Создание списка слов", MsgBody: "Выберите изучаемый язык", StateCmd: cmds["wl_creation_frgn_lang"], AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
 	"wl_creation_ntv_lang":  {Code: "wl_creation_ntv_lang", MsgHdr: "Создание списка слов", MsgBody: "Выберите родной (базовый) язык", StateCmd: cmds["wl_creation_ntv_lang"], AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
@@ -64,8 +66,10 @@ var states = map[string]*tcPkg.State{
 
 	// Learning
 	"all_exercises": {Code: "all_exercises", MsgHdr: "Изучение списка слов \"{{.WLName}}\"", MsgBody: "Выберите упражнение", StateCmd: cmds["xrcs"], AvailCmds: [][]*tcPkg.Cmd{{cmds["back_to_wl"]}, {cmds["to_main_menu"]}}},
+	"xrcs":          {Code: "xrcs", MsgHdr: "Изучение списка слов \"{{.WLName}}\"", MsgBody: "{{.ExerciseTaskText}}", AvailCmds: [][]*tcPkg.Cmd{{cmds["finish_xrcs"]}}},
+	"xrcs_finish":   {Code: "xrcs_finish", MsgHdr: "Изучение списка слов \"{{.WLName}}\"", MsgBody: "На этом пока все! :)", AvailCmds: [][]*tcPkg.Cmd{{cmds["finish_xrcs"]}, {cmds["to_main_menu"]}}},
 }
 
 var exercises = map[string]*tcPkg.Excersice{
-	"write_frgn": {Code: "write_frgn", Name: "Ввод слов на изучаемом языке"},
+	"write_frgn": {Code: "write_frgn", Name: "Ввод слов на изучаемом языке", TaskText: "{{.PrevTaskResult}}Введите слово \"{{.WordNative}}\" на изучаемом ({{.WLFrgnLang}}) языке", WaitForDataInput: true},
 }

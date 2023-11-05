@@ -108,6 +108,22 @@ func TgInlineKeyboradStateCmdRows(r res.Resources, tc *tcPkg.Chat) (ikRows [][]t
 	return ikRows, nil
 }
 
+func TgInlineKeyboradAvailCmdsRows(r res.Resources, tc *tcPkg.Chat) [][]tgbotapi.InlineKeyboardButton {
+	emptyWL := (tc.WL != nil && tc.WL.WordsNum == 0)
+
+	availCmds := tc.State.AvailCmdsByFlgs(emptyWL)
+
+	inlineKeyboardRows := make([][]tgbotapi.InlineKeyboardButton, len(availCmds))
+	for i, cmdsRow := range availCmds {
+		inlineKeyboardRows[i] = make([]tgbotapi.InlineKeyboardButton, len(cmdsRow))
+		for j, cmd := range cmdsRow {
+			inlineKeyboardRows[i][j] = cmd.TgButton()
+		}
+	}
+
+	return inlineKeyboardRows
+}
+
 func TgInlineKeyboradMarkup(r res.Resources, tc *tcPkg.Chat) (ik tgbotapi.InlineKeyboardMarkup, err error) {
 	ikRows := make([][]tgbotapi.InlineKeyboardButton, 0)
 
@@ -121,7 +137,7 @@ func TgInlineKeyboradMarkup(r res.Resources, tc *tcPkg.Chat) (ik tgbotapi.Inline
 		}
 	}
 
-	ikAvailCmdsRows := tc.State.TgInlineKeyboradAvailCmdsRows()
+	ikAvailCmdsRows := TgInlineKeyboradAvailCmdsRows(r, tc)
 	if len(ikAvailCmdsRows) > 0 {
 		ikRows = append(ikRows, ikAvailCmdsRows...)
 	}

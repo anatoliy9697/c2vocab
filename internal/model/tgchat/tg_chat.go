@@ -13,19 +13,23 @@ import (
 )
 
 type Chat struct {
-	TgId         int             `json:"tgId"`
-	UserId       int             `json:"userId"`
-	User         *usrPkg.User    `json:"user"`
-	CreatedAt    time.Time       `json:"createdAt"`
-	State        *State          `json:"-"`
-	WLFrgnLang   *commons.Lang   `json:"wlFrgnLang"`
-	WLNtvLang    *commons.Lang   `json:"wlNtvLang"`
-	WLId         int             `json:"wlId"`
-	WL           *wlPkg.WordList `json:"wl"`
-	WordFrgn     string          `json:"wordFrgn"`
-	WordId       int             `json:"wordId"`
-	Word         *wlPkg.Word     `json:"word"`
-	BotLastMsgId int             `json:"botLastMsgId"`
+	TgId            int             `json:"tgId"`
+	UserId          int             `json:"userId"`
+	User            *usrPkg.User    `json:"user"`
+	CreatedAt       time.Time       `json:"createdAt"`
+	State           *State          `json:"-"`
+	WLFrgnLang      *commons.Lang   `json:"wlFrgnLang"`
+	WLNtvLang       *commons.Lang   `json:"wlNtvLang"`
+	WLId            int             `json:"wlId"`
+	WL              *wlPkg.WordList `json:"wl"`
+	WordFrgn        string          `json:"wordFrgn"`
+	WordId          int             `json:"wordId"`
+	Word            *wlPkg.Word     `json:"word"`
+	ExcersiceCode   string          `json:"excersiceCode"`
+	Excersice       *Excersice      `json:"excersice"`
+	TrainedWordsIds string          `json:"trainedWordsIds"`
+	PrevTaskResult  string          `json:"prevTaskReult"`
+	BotLastMsgId    int             `json:"botLastMsgId"`
 }
 
 type State struct {
@@ -41,14 +45,18 @@ type State struct {
 }
 
 type Cmd struct {
-	Code          string `json:"code"`
-	DisplayLabel  string `json:"-"`
-	DestStateCode string `json:"-"`
+	Code           string `json:"code"`
+	DisplayLabel   string `json:"-"`
+	DestStateCode  string `json:"-"`
+	NotEmptyWLOnly bool   `json:"-"`
 }
 
 type Excersice struct {
-	Code string `json:"code"`
-	Name string `json:"name"`
+	Code             string             `json:"code"`
+	Name             string             `json:"-"`
+	TaskText         string             `json:"-"`
+	TaskTextTmpl     *template.Template `json:"-"`
+	WaitForDataInput bool               `json:"-"`
 }
 
 type IncMsgValidationErr struct {
@@ -69,15 +77,17 @@ type IncMsg struct {
 }
 
 type outMsgTmplArgs struct {
-	ErrText     string
-	WLName      string
-	UsrTgFName  string
-	UsrTgLName  string
-	WLFrgnLang  string
-	WLNtvLang   string
-	WordsNum    int
-	WordForeign string
-	WordNative  string
+	ErrText          string
+	WLName           string
+	UsrTgFName       string
+	UsrTgLName       string
+	WLFrgnLang       string
+	WLNtvLang        string
+	WordsNum         int
+	WordForeign      string
+	WordNative       string
+	ExerciseTaskText string
+	PrevTaskResult   string
 }
 
 var (
@@ -105,8 +115,8 @@ func (tc *Chat) SetBotLastMsgId(msgId int) {
 	tc.BotLastMsgId = msgId
 }
 
-func (tc *Chat) OutMsgArgs(tmpl string, errText string) *outMsgTmplArgs {
-	args := &outMsgTmplArgs{}
+func (tc *Chat) OutMsgArgs(tmpl string, errText string) (args *outMsgTmplArgs, err error) {
+	args = &outMsgTmplArgs{}
 
 	submatches := OutMsgArgsRegExp().FindAllStringSubmatch(tmpl, -1)
 
@@ -133,11 +143,19 @@ func (tc *Chat) OutMsgArgs(tmpl string, errText string) *outMsgTmplArgs {
 				args.WordForeign = tc.Word.Foreign
 			case "WordNative":
 				args.WordNative = tc.Word.Native
+			case "ExerciseTaskText":
+				if args.ExerciseTaskText, err = tc.ExcersiceTaskText(); err != nil {
+					return nil, err
+				}
+			case "PrevTaskResult":
+				if tc.PrevTaskResult != "" {
+					args.PrevTaskResult = tc.PrevTaskResult + "\n\n"
+				}
 			}
 		}
 	}
 
-	return args
+	return args, nil
 }
 
 func (tc *Chat) OutMsgText(errText string) (string, error) {
@@ -145,12 +163,39 @@ func (tc *Chat) OutMsgText(errText string) (string, error) {
 
 	tmplText := tc.State.OutMsgTmplContent()
 
+	var args *outMsgTmplArgs
+	if args, err = tc.OutMsgArgs(tmplText, errText); err != nil {
+		return "", err
+	}
+
 	var buf bytes.Buffer
-	if err = tc.State.MsgTmpl.Execute(&buf, tc.OutMsgArgs(tmplText, errText)); err != nil {
+	if err = tc.State.MsgTmpl.Execute(&buf, args); err != nil {
 		return "", err
 	}
 
 	return buf.String(), nil
+}
+
+func (tc *Chat) ExcersiceTaskText() (string, error) {
+	var err error
+
+	tmplText := tc.Excersice.TaskTextTmplContent()
+
+	var args *outMsgTmplArgs
+	if args, err = tc.OutMsgArgs(tmplText, ""); err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	if err = tc.Excersice.TaskTextTmpl.Execute(&buf, args); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
+}
+
+func (tc *Chat) IsWaitForDataInput() bool {
+	return tc.State.WaitForDataInput || (tc.Excersice != nil && tc.Excersice.WaitForDataInput)
 }
 
 func (s State) OutMsgTmplContent() string {
@@ -185,18 +230,32 @@ func (s State) IsCmdAvail(cmdCode string) bool {
 	return false
 }
 
-func (s State) TgInlineKeyboradAvailCmdsRows() [][]tgbotapi.InlineKeyboardButton { // TODO: Не отображать некоторые недоступные кнопки
-	inlineKeyboardRows := make([][]tgbotapi.InlineKeyboardButton, len(s.AvailCmds))
-	for i, cmdsRow := range s.AvailCmds {
-		inlineKeyboardRows[i] = make([]tgbotapi.InlineKeyboardButton, len(cmdsRow))
-		for j, cmd := range cmdsRow {
-			inlineKeyboardRows[i][j] = cmd.TgButton()
+func (s State) AvailCmdsByFlgs(emptyWL bool) [][]*Cmd {
+	if !emptyWL {
+		return s.AvailCmds
+	}
+
+	availCmds := make([][]*Cmd, 0)
+
+	for _, cmdsRow := range s.AvailCmds {
+		tmpCmdsRow := make([]*Cmd, 0)
+		for _, cmd := range cmdsRow {
+			if !emptyWL || !cmd.NotEmptyWLOnly {
+				tmpCmdsRow = append(tmpCmdsRow, cmd)
+			}
+		}
+		if len(tmpCmdsRow) > 0 {
+			availCmds = append(availCmds, tmpCmdsRow)
 		}
 	}
 
-	return inlineKeyboardRows
+	return availCmds
 }
 
 func (c Cmd) TgButton() tgbotapi.InlineKeyboardButton {
 	return tgbotapi.NewInlineKeyboardButtonData(c.DisplayLabel, c.Code)
+}
+
+func (x Excersice) TaskTextTmplContent() string {
+	return x.TaskText
 }

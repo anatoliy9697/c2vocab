@@ -288,3 +288,48 @@ func (r pgRepo) UpdateWord(w *wlPkg.Word) error {
 
 	return nil
 }
+
+func (r pgRepo) RandActiveWordByWLIdAndExcludedIds(wlId int, excludedIds string) (*wlPkg.Word, error) {
+	conn, err := r.pool.Acquire(r.ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	optionalCondition := ""
+	if excludedIds != "" {
+		optionalCondition = " AND id NOT IN (" + excludedIds + ")"
+	}
+
+	sql := `
+		SELECT
+			id
+			, frgn
+			, ntv
+			, created_at
+		FROM c2v_word
+		WHERE wl_id = $1 AND active IS TRUE` + optionalCondition + `
+		ORDER BY RANDOM()
+		LIMIT 1
+	`
+	var id int
+	var frgn, ntv string
+	var createdAt time.Time
+	err = conn.QueryRow(r.ctx, sql, wlId).Scan(
+		&id,
+		&frgn,
+		&ntv,
+		&createdAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &wlPkg.Word{
+		Id:        id,
+		Active:    true,
+		Foreign:   frgn,
+		Native:    ntv,
+		CreatedAt: createdAt,
+	}, nil
+}

@@ -41,6 +41,12 @@ func MapToInnerTgChatAndSave(r res.Resources, outerTC *tgbotapi.Chat, u *usrPkg.
 		}
 	}
 
+	if tc.ExcersiceCode != "" {
+		if tc.Excersice, err = r.TcRepo.ExcersiceByCode(tc.ExcersiceCode); err != nil {
+			return nil, err
+		}
+	}
+
 	return tc, nil
 }
 
@@ -55,7 +61,9 @@ func SetTgChatNextState(r res.Resources, tc *tcPkg.Chat, msg *tcPkg.IncMsg) (err
 		return err
 	}
 
-	tc.SetState(nextState)
+	if nextState != nil {
+		tc.SetState(nextState)
+	}
 
 	return nil
 }

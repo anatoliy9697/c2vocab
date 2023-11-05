@@ -1,23 +1,25 @@
 package usecases
 
 import (
+	"errors"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/anatoliy9697/c2vocab/internal/model/commons"
 	tcPkg "github.com/anatoliy9697/c2vocab/internal/model/tgchat"
 	wlPkg "github.com/anatoliy9697/c2vocab/internal/model/wordlist"
 	res "github.com/anatoliy9697/c2vocab/internal/resources"
+	"github.com/jackc/pgx/v5"
 )
 
 func ClearTgChaTmpFields(tc *tcPkg.Chat) {
 	tc.WLFrgnLang = nil
 	tc.WLNtvLang = nil
-	tc.WLId = 0
-	tc.WL = nil
-	tc.WordFrgn = ""
-	tc.WordId = 0
-	tc.Word = nil
+	ClearWLFields(tc)
+	ClearWordCreationFields(tc)
+	ClearWordFields(tc)
+	ClearExerciseFields(tc)
 }
 
 func SetTgChatWLFrgnLang(tc *tcPkg.Chat, langCode string) {
@@ -107,7 +109,7 @@ func CreateWord(r res.Resources, tc *tcPkg.Chat, wordNtv string) (err error) {
 	return nil
 }
 
-func BackToWL(tc *tcPkg.Chat) {
+func ClearWordCreationFields(tc *tcPkg.Chat) {
 	tc.WordFrgn = ""
 }
 
@@ -123,7 +125,7 @@ func SetTgChatWord(r res.Resources, tc *tcPkg.Chat, wordIdStr string) (err error
 	return nil
 }
 
-func BackToAllWords(tc *tcPkg.Chat) {
+func ClearWordFields(tc *tcPkg.Chat) {
 	tc.WordId = 0
 	tc.Word = nil
 }
@@ -132,4 +134,73 @@ func DeleteWord(r res.Resources, w *wlPkg.Word) (err error) {
 	w.Deactivate()
 
 	return r.WLRepo.UpdateWord(w)
+}
+
+func SetTgChatExercise(r res.Resources, tc *tcPkg.Chat, excersiceCode string) (err error) {
+	tc.ExcersiceCode = excersiceCode
+
+	if tc.Excersice, err = r.TcRepo.ExcersiceByCode(excersiceCode); err != nil {
+		return err
+	}
+
+	if tc.Word, err = r.WLRepo.RandActiveWordByWLIdAndExcludedIds(tc.WL.Id, ""); err != nil {
+		return err
+	}
+	tc.WordId = tc.Word.Id
+
+	return nil
+}
+
+func ClearExerciseFields(tc *tcPkg.Chat) {
+	tc.ExcersiceCode = ""
+	tc.Excersice = nil
+	tc.WordId = 0
+	tc.Word = nil
+	tc.TrainedWordsIds = ""
+}
+
+func ClearWLFields(tc *tcPkg.Chat) {
+	tc.WLId = 0
+	tc.WL = nil
+}
+
+func ProcessUserTaskDataInput(r res.Resources, tc *tcPkg.Chat, usrAnswer string) (err error) {
+	usrAnswer = strings.ToLower(usrAnswer)
+
+	prevTaskResult := "Правильно!"
+
+	switch tc.ExcersiceCode {
+
+	case "write_frgn":
+		if usrAnswer != strings.ToLower(tc.Word.Foreign) {
+			prevTaskResult = "Неправильно. Правильный ответ: \"" + tc.Word.Foreign + "\""
+		}
+
+	default:
+
+	}
+
+	if tc.TrainedWordsIds == "" {
+		tc.TrainedWordsIds = strconv.Itoa(tc.WordId)
+	} else {
+		tc.TrainedWordsIds += ", " + strconv.Itoa(tc.WordId)
+	}
+	tc.PrevTaskResult = prevTaskResult
+	if tc.Word, err = r.WLRepo.RandActiveWordByWLIdAndExcludedIds(tc.WL.Id, tc.TrainedWordsIds); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) { // TODO: тут лучше вынести в отдельную функцию
+			var s *tcPkg.State
+			if s, err = r.TcRepo.StateByCode("xrcs_finish"); err != nil {
+				return err
+			}
+			tc.SetState(s)
+			ClearExerciseFields(tc)
+		} else {
+			return err
+		}
+	}
+	if tc.Word != nil {
+		tc.WordId = tc.Word.Id
+	}
+
+	return nil
 }

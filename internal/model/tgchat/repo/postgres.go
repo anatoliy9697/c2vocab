@@ -21,6 +21,10 @@ func initPGRepo(c context.Context, p *pgxpool.Pool) (*pgRepo, error) {
 		return nil, err
 	}
 
+	if err := initExercisesTaskTextTmpls(); err != nil {
+		return nil, err
+	}
+
 	return &pgRepo{c, p}, nil
 }
 
@@ -57,7 +61,7 @@ func (r pgRepo) TgChatByUserId(usrId int) (*tcPkg.Chat, error) {
 
 	var tgId, wlId, wordId, botLastMsgId int
 	var createdAt time.Time
-	var stateCode, wlFrgnLangCode, wlNtvLangCode, wordFrgn string
+	var stateCode, wlFrgnLangCode, wlNtvLangCode, wordFrgn, excersiceCode, trainedWordsIds string
 	sql := `
 		SELECT
 			tg_id
@@ -68,6 +72,8 @@ func (r pgRepo) TgChatByUserId(usrId int) (*tcPkg.Chat, error) {
 			, COALESCE(wl_id, 0)
 			, COALESCE(word_frgn, '')
 			, COALESCE(word_id, 0)
+			, COALESCE(exercise_code, '')
+			, COALESCE(trained_words_ids, '')
 			, COALESCE(bot_last_msg_id, 0)
 		FROM c2v_tg_chat
 		WHERE user_id = $1
@@ -81,6 +87,8 @@ func (r pgRepo) TgChatByUserId(usrId int) (*tcPkg.Chat, error) {
 		&wlId,
 		&wordFrgn,
 		&wordId,
+		&excersiceCode,
+		&trainedWordsIds,
 		&botLastMsgId,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -96,16 +104,18 @@ func (r pgRepo) TgChatByUserId(usrId int) (*tcPkg.Chat, error) {
 	}
 
 	return &tcPkg.Chat{
-		TgId:         tgId,
-		CreatedAt:    createdAt,
-		UserId:       usrId,
-		State:        state,
-		WLFrgnLang:   commons.LangByCode(wlFrgnLangCode),
-		WLNtvLang:    commons.LangByCode(wlNtvLangCode),
-		WLId:         wlId,
-		WordFrgn:     wordFrgn,
-		WordId:       wordId,
-		BotLastMsgId: botLastMsgId,
+		TgId:            tgId,
+		CreatedAt:       createdAt,
+		UserId:          usrId,
+		State:           state,
+		WLFrgnLang:      commons.LangByCode(wlFrgnLangCode),
+		WLNtvLang:       commons.LangByCode(wlNtvLangCode),
+		WLId:            wlId,
+		WordFrgn:        wordFrgn,
+		WordId:          wordId,
+		ExcersiceCode:   excersiceCode,
+		TrainedWordsIds: trainedWordsIds,
+		BotLastMsgId:    botLastMsgId,
 	}, nil
 }
 
@@ -124,8 +134,8 @@ func (r pgRepo) UpdateTgChat(tc *tcPkg.Chat) error {
 		wlNtvLangCode = tc.WLNtvLang.Code
 	}
 	sql := `
-		UPDATE c2v_tg_chat SET (tg_id, state_code, wl_frgn_lang_code, wl_ntv_lang_code, wl_id, word_frgn, word_id, bot_last_msg_id) = ($1, $2, $3, $4, $5, $6, $7, $8)
-		WHERE user_id = $9
+		UPDATE c2v_tg_chat SET (tg_id, state_code, wl_frgn_lang_code, wl_ntv_lang_code, wl_id, word_frgn, word_id, exercise_code, trained_words_ids, bot_last_msg_id) = ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		WHERE user_id = $11
 	`
 	_, err = conn.Exec(r.c, sql,
 		tc.TgId,
@@ -135,6 +145,8 @@ func (r pgRepo) UpdateTgChat(tc *tcPkg.Chat) error {
 		tc.WLId,
 		tc.WordFrgn,
 		tc.WordId,
+		tc.ExcersiceCode,
+		tc.TrainedWordsIds,
 		tc.BotLastMsgId,
 		tc.UserId,
 	)
