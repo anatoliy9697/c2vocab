@@ -1,12 +1,14 @@
 package usecases
 
 import (
+	"errors"
 	"time"
 
 	tcPkg "github.com/anatoliy9697/c2vocab/internal/model/tgchat"
 	usrPkg "github.com/anatoliy9697/c2vocab/internal/model/user"
 	res "github.com/anatoliy9697/c2vocab/internal/resources"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/jackc/pgx/v5"
 )
 
 func MapToInnerTgChatAndSave(r res.Resources, outerTC *tgbotapi.Chat, u *usrPkg.User) (tc *tcPkg.Chat, err error) {
@@ -52,7 +54,7 @@ func MapToInnerTgChatAndSave(r res.Resources, outerTC *tgbotapi.Chat, u *usrPkg.
 
 func SetTgChatNextState(r res.Resources, tc *tcPkg.Chat, msg *tcPkg.IncMsg) (err error) {
 	var nextState *tcPkg.State
-	if msg.Cmd != nil {
+	if msg.Cmd != nil && msg.Cmd.DestStateCode != "" {
 		nextState, err = r.TcRepo.StateByCode(msg.Cmd.DestStateCode)
 	} else if tc.State.NextStateCode != "" {
 		nextState, err = r.TcRepo.StateByCode(tc.State.NextStateCode)
@@ -63,6 +65,25 @@ func SetTgChatNextState(r res.Resources, tc *tcPkg.Chat, msg *tcPkg.IncMsg) (err
 
 	if nextState != nil {
 		tc.SetState(nextState)
+	}
+
+	return nil
+}
+
+func SetTgChatExerciseNextWord(r res.Resources, tc *tcPkg.Chat) (err error) {
+	if tc.Word, err = r.WLRepo.NextWordForTraining(tc.WL.Id, tc.TrainedWordsIds); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			var s *tcPkg.State
+			if s, err = r.TcRepo.StateByCode("xrcs_finish"); err != nil {
+				return err
+			}
+			tc.SetState(s)
+		} else {
+			return err
+		}
+	}
+	if tc.Word != nil {
+		tc.WordId = tc.Word.Id
 	}
 
 	return nil

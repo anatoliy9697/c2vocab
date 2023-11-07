@@ -16,7 +16,7 @@ func WLFrgnLangTgInlineKeyboard(tc *tcPkg.Chat) (ikRows [][]tgbotapi.InlineKeybo
 
 	for i, lang := range commons.AvailLangs {
 		ikRows[i] = make([]tgbotapi.InlineKeyboardButton, 1)
-		ikRows[i][0] = tgbotapi.NewInlineKeyboardButtonData(lang.Name, tc.State.StateCmd.Code+" "+lang.Code)
+		ikRows[i][0] = tgbotapi.NewInlineKeyboardButtonData(lang.Name, tc.State.Cmd.Code+" "+lang.Code)
 	}
 
 	return ikRows
@@ -30,7 +30,7 @@ func WLNtvLangTgInlineKeyboard(tc *tcPkg.Chat) (ikRows [][]tgbotapi.InlineKeyboa
 	for _, lang := range commons.AvailLangs {
 		if lang.Code != tc.WLFrgnLang.Code {
 			ikRows[i] = make([]tgbotapi.InlineKeyboardButton, 1)
-			ikRows[i][0] = tgbotapi.NewInlineKeyboardButtonData(lang.Name, tc.State.StateCmd.Code+" "+lang.Code)
+			ikRows[i][0] = tgbotapi.NewInlineKeyboardButtonData(lang.Name, tc.State.Cmd.Code+" "+lang.Code)
 			i++
 		}
 	}
@@ -47,7 +47,7 @@ func AllWLTgInlineKeyboard(r res.Resources, tc *tcPkg.Chat) (ikRows [][]tgbotapi
 	var ikRow []tgbotapi.InlineKeyboardButton
 	i := 1
 	for _, wl := range wls {
-		ikRow = []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(strconv.Itoa(i)+". \""+wl.Name+"\"", tc.State.StateCmd.Code+" "+strconv.Itoa(int(wl.Id)))}
+		ikRow = []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(strconv.Itoa(i)+". \""+wl.Name+"\"", tc.State.Cmd.Code+" "+strconv.Itoa(int(wl.Id)))}
 		ikRows = append(ikRows, ikRow)
 		i++
 	}
@@ -64,7 +64,7 @@ func AllWordsTgInlineKeyboard(r res.Resources, tc *tcPkg.Chat) (ikRows [][]tgbot
 	var ikRow []tgbotapi.InlineKeyboardButton
 	i := 1
 	for _, word := range words {
-		ikRow = []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(strconv.Itoa(i)+". \""+word.Foreign+"\" - \""+word.Native+"\"", tc.State.StateCmd.Code+" "+strconv.Itoa(int(word.Id)))}
+		ikRow = []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(strconv.Itoa(i)+". \""+word.Foreign+"\" - \""+word.Native+"\"", tc.State.Cmd.Code+" "+strconv.Itoa(int(word.Id)))}
 		ikRows = append(ikRows, ikRow)
 		i++
 	}
@@ -78,7 +78,7 @@ func AllExercisesTgInlineKeyboard(r res.Resources, tc *tcPkg.Chat) (ikRows [][]t
 	var ikRow []tgbotapi.InlineKeyboardButton
 	i := 1
 	for _, xrcs := range xrcses {
-		ikRow = []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(strconv.Itoa(i)+". "+xrcs.Name, tc.State.StateCmd.Code+" "+xrcs.Code)}
+		ikRow = []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(strconv.Itoa(i)+". "+xrcs.Name, tc.State.Cmd.Code+" "+xrcs.Code)}
 		ikRows = append(ikRows, ikRow)
 		i++
 	}
@@ -86,21 +86,55 @@ func AllExercisesTgInlineKeyboard(r res.Resources, tc *tcPkg.Chat) (ikRows [][]t
 	return ikRows
 }
 
+func WordForeignSelectionExerciseTgInlineKeyboard(r res.Resources, tc *tcPkg.Chat) (ikRows [][]tgbotapi.InlineKeyboardButton, err error) {
+	var ansOpts []wlPkg.AnswerOption
+
+	if ansOpts, err = r.WLRepo.WordSelectionAnswerOptions(tc.Word, true, tc.WL.FrgnLang.Code, tc.UserId, 4); err != nil {
+		return nil, err
+	}
+
+	ikRow := make([]tgbotapi.InlineKeyboardButton, 0, 2)
+	for _, ansOpt := range ansOpts {
+		ikRow = append(ikRow, tgbotapi.NewInlineKeyboardButtonData(ansOpt.Answer, "ans "+ansOpt.IsCorrect))
+		if len(ikRow) == 2 {
+			ikRows = append(ikRows, ikRow)
+			ikRow = make([]tgbotapi.InlineKeyboardButton, 0, 2)
+		}
+	}
+	if len(ikRow) == 2 {
+		ikRows = append(ikRows, ikRow)
+	}
+
+	return ikRows, nil
+}
+
+func TgInlineKeyboradExerciseCmdRows(r res.Resources, tc *tcPkg.Chat) (ikRows [][]tgbotapi.InlineKeyboardButton, err error) {
+	switch tc.Excersice.Code {
+	case "select_frgn":
+		if ikRows, err = WordForeignSelectionExerciseTgInlineKeyboard(r, tc); err != nil {
+			return nil, err
+		}
+	default:
+	}
+
+	return ikRows, nil
+}
+
 func TgInlineKeyboradStateCmdRows(r res.Resources, tc *tcPkg.Chat) (ikRows [][]tgbotapi.InlineKeyboardButton, err error) {
-	switch {
-	case tc.State.StateCmd.Code == "wl_creation_frgn_lang" || tc.State.StateCmd.Code == "wl_editing_frgn_lang":
+	switch tc.State.Cmd.Code {
+	case "wl_creation_frgn_lang", "wl_editing_frgn_lang":
 		ikRows = WLFrgnLangTgInlineKeyboard(tc)
-	case tc.State.StateCmd.Code == "wl_creation_ntv_lang" || tc.State.StateCmd.Code == "wl_editing_ntv_lang":
+	case "wl_creation_ntv_lang", "wl_editing_ntv_lang":
 		ikRows = WLNtvLangTgInlineKeyboard(tc)
-	case tc.State.StateCmd.Code == "wl":
+	case "wl":
 		if ikRows, err = AllWLTgInlineKeyboard(r, tc); err != nil {
 			return nil, err
 		}
-	case tc.State.StateCmd.Code == "w":
+	case "w":
 		if ikRows, err = AllWordsTgInlineKeyboard(r, tc); err != nil {
 			return nil, err
 		}
-	case tc.State.StateCmd.Code == "xrcs":
+	case "xrcs":
 		ikRows = AllExercisesTgInlineKeyboard(r, tc)
 	default:
 	}
@@ -127,7 +161,17 @@ func TgInlineKeyboradAvailCmdsRows(r res.Resources, tc *tcPkg.Chat) [][]tgbotapi
 func TgInlineKeyboradMarkup(r res.Resources, tc *tcPkg.Chat) (ik tgbotapi.InlineKeyboardMarkup, err error) {
 	ikRows := make([][]tgbotapi.InlineKeyboardButton, 0)
 
-	if tc.State.StateCmd != nil {
+	if tc.Excersice != nil && tc.Excersice.Cmd != nil && tc.State.Code == "xrcs" {
+		ikExerciseCmdRows, err := TgInlineKeyboradExerciseCmdRows(r, tc)
+		if err != nil {
+			return ik, err
+		}
+		if len(ikExerciseCmdRows) > 0 {
+			ikRows = append(ikRows, ikExerciseCmdRows...)
+		}
+	}
+
+	if tc.State.Cmd != nil {
 		ikStateCmdRows, err := TgInlineKeyboradStateCmdRows(r, tc)
 		if err != nil {
 			return ik, err

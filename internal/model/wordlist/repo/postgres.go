@@ -6,12 +6,18 @@ import (
 
 	"github.com/anatoliy9697/c2vocab/internal/model/commons"
 	wlPkg "github.com/anatoliy9697/c2vocab/internal/model/wordlist"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type pgRepo struct {
 	ctx  context.Context
 	pool *pgxpool.Pool
+}
+
+var reserveAnswerOptions = map[string][]wlPkg.AnswerOption{
+	"en": {{Answer: "reserve", IsCorrect: "0"}, {Answer: "explain", IsCorrect: "0"}, {Answer: "example", IsCorrect: "0"}},
+	"ru": {{Answer: "запасной", IsCorrect: "0"}, {Answer: "впечатлять", IsCorrect: "0"}, {Answer: "произношение", IsCorrect: "0"}},
 }
 
 func initPGRepo(c context.Context, p *pgxpool.Pool) *pgRepo {
@@ -289,7 +295,7 @@ func (r pgRepo) UpdateWord(w *wlPkg.Word) error {
 	return nil
 }
 
-func (r pgRepo) RandActiveWordByWLIdAndExcludedIds(wlId int, excludedIds string) (*wlPkg.Word, error) {
+func (r pgRepo) NextWordForTraining(wlId int, excludedIds string) (*wlPkg.Word, error) {
 	conn, err := r.pool.Acquire(r.ctx)
 	if err != nil {
 		return nil, err
@@ -332,4 +338,59 @@ func (r pgRepo) RandActiveWordByWLIdAndExcludedIds(wlId int, excludedIds string)
 		Native:    ntv,
 		CreatedAt: createdAt,
 	}, nil
+}
+
+func (r pgRepo) WordSelectionAnswerOptions(word *wlPkg.Word, isFrgn bool, langCode string, userId, optsLimit int) (opts []wlPkg.AnswerOption, err error) {
+	opts = make([]wlPkg.AnswerOption, 0, optsLimit)
+
+	defer func() {
+		w := ""
+		if isFrgn {
+			w = word.Foreign
+		} else {
+			w = word.Native
+		}
+		opts = append(opts, wlPkg.AnswerOption{Answer: w, IsCorrect: "1"})
+		if len(opts) < optsLimit {
+			opts = append(opts, reserveAnswerOptions[langCode][0:optsLimit-len(opts)]...)
+		}
+		opts = wlPkg.MixAnswerOptions(opts)
+	}()
+
+	conn, err := r.pool.Acquire(r.ctx)
+	if err != nil {
+		return
+	}
+	defer conn.Release()
+
+	sql := `
+		SELECT
+			CASE
+				WHEN wl.frgn_lang_code = $2 THEN w.frgn
+				WHEN wl.ntv_lang_code = $2 THEN w.ntv
+			END AS word
+		FROM c2v_word w
+		JOIN c2v_word_list wl ON w.wl_id = wl.id
+		WHERE
+			wl.owner_id = $1
+			AND w.active IS TRUE
+			AND wl.active IS TRUE
+			AND w.id <> $3
+			AND (wl.frgn_lang_code = $2 OR wl.ntv_lang_code = $2)
+		ORDER BY RANDOM()
+		LIMIT $4
+	` // TODO: В будущем надо оптимизировать
+	var rows pgx.Rows
+	var otherW string
+	if rows, err = conn.Query(r.ctx, sql, userId, langCode, word.Id, optsLimit-1); err != nil {
+		return
+	}
+	for rows.Next() {
+		if err = rows.Scan(&otherW); err != nil {
+			continue
+		}
+		opts = append(opts, wlPkg.AnswerOption{Answer: otherW, IsCorrect: "0"})
+	}
+
+	return
 }

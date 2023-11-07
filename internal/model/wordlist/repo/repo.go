@@ -16,7 +16,8 @@ type Repo interface {
 	ActiveWordsByWLId(int) ([]*wlPkg.Word, error)
 	WordById(int) (*wlPkg.Word, error)
 	UpdateWord(*wlPkg.Word) error
-	RandActiveWordByWLIdAndExcludedIds(int, string) (*wlPkg.Word, error)
+	NextWordForTraining(int, string) (*wlPkg.Word, error)
+	WordSelectionAnswerOptions(*wlPkg.Word, bool, string, int, int) ([]wlPkg.AnswerOption, error)
 }
 
 func Init(c context.Context, p *pgxpool.Pool) Repo {

@@ -39,6 +39,7 @@ var cmds = map[string]*tcPkg.Cmd{
 	// Learning
 	"learn_wl": {Code: "learn_wl", DisplayLabel: "🧠 Учить", DestStateCode: "all_exercises", NotEmptyWLOnly: true},
 	"xrcs":     {Code: "xrcs", DestStateCode: "xrcs"},
+	"ans":      {Code: "ans"},
 }
 
 var states = map[string]*tcPkg.State{
@@ -48,28 +49,29 @@ var states = map[string]*tcPkg.State{
 
 	// Word list
 	"wl":                    {Code: "wl", MsgHdr: "Список слов \"{{.WLName}}\"", MsgBody: "Изучаемый язык: {{.WLFrgnLang}}\nБазовый язык: {{.WLNtvLang}}\nВсего слов: {{.WordsNum}} шт.", AvailCmds: [][]*tcPkg.Cmd{{cmds["learn_wl"]}, {cmds["all_w"]}, {cmds["add_w"]}, {cmds["delete_wl"], cmds["edit_wl"]}, {cmds["back_to_all_wl"]}, {cmds["to_main_menu"]}}},
-	"all_wl":                {Code: "all_wl", MsgHdr: "Мои списки", StateCmd: cmds["wl"], AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
-	"wl_creation_frgn_lang": {Code: "wl_creation_frgn_lang", MsgHdr: "Создание списка слов", MsgBody: "Выберите изучаемый язык", StateCmd: cmds["wl_creation_frgn_lang"], AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
-	"wl_creation_ntv_lang":  {Code: "wl_creation_ntv_lang", MsgHdr: "Создание списка слов", MsgBody: "Выберите родной (базовый) язык", StateCmd: cmds["wl_creation_ntv_lang"], AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
+	"all_wl":                {Code: "all_wl", MsgHdr: "Мои списки", Cmd: cmds["wl"], AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
+	"wl_creation_frgn_lang": {Code: "wl_creation_frgn_lang", MsgHdr: "Создание списка слов", MsgBody: "Выберите изучаемый язык", Cmd: cmds["wl_creation_frgn_lang"], AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
+	"wl_creation_ntv_lang":  {Code: "wl_creation_ntv_lang", MsgHdr: "Создание списка слов", MsgBody: "Выберите родной (базовый) язык", Cmd: cmds["wl_creation_ntv_lang"], AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
 	"wl_creation_name":      {Code: "wl_creation_name", MsgHdr: "Создание списка слов", MsgBody: "Введите название списка", WaitForDataInput: true, NextStateCode: "wl", AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
-	"wl_editing_frgn_lang":  {Code: "wl_editing_frgn_lang", MsgHdr: "Редактирование списка слов", MsgBody: "Выберите изучаемый язык", StateCmd: cmds["wl_editing_frgn_lang"], AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
-	"wl_editing_ntv_lang":   {Code: "wl_editing_ntv_lang", MsgHdr: "Редактирование списка слов", MsgBody: "Выберите родной (базовый) язык", StateCmd: cmds["wl_editing_ntv_lang"], AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
+	"wl_editing_frgn_lang":  {Code: "wl_editing_frgn_lang", MsgHdr: "Редактирование списка слов", MsgBody: "Выберите изучаемый язык", Cmd: cmds["wl_editing_frgn_lang"], AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
+	"wl_editing_ntv_lang":   {Code: "wl_editing_ntv_lang", MsgHdr: "Редактирование списка слов", MsgBody: "Выберите родной (базовый) язык", Cmd: cmds["wl_editing_ntv_lang"], AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
 	"wl_editing_name":       {Code: "wl_editing_name", MsgHdr: "Редактирование списка слов", MsgBody: "Введите название списка", WaitForDataInput: true, NextStateCode: "wl", AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
 	"wl_del_confirmation":   {Code: "wl_del_confirmation", MsgHdr: "Удаление списка слов", MsgBody: "Вы действительно хотите удалить список \"{{.WLName}}\"?", AvailCmds: [][]*tcPkg.Cmd{{cmds["confirm_wl_del"], cmds["reject_wl_del"]}}},
 
 	// Word
 	"w":                  {Code: "w", MsgHdr: "\"{{.WordForeign}}\" - \"{{.WordNative}}\"", MsgBody: "Список слов: \"{{.WLName}}\"\nИзучаемый язык: {{.WLFrgnLang}}\nБазовый язык: {{.WLNtvLang}}", AvailCmds: [][]*tcPkg.Cmd{{cmds["delete_w"]}, {cmds["back_to_all_w"]}, {cmds["to_main_menu"]}}},
-	"all_w":              {Code: "all_w", MsgHdr: "Слова списка \"{{.WLName}}\"", StateCmd: cmds["w"], AvailCmds: [][]*tcPkg.Cmd{{cmds["back_to_wl"]}, {cmds["to_main_menu"]}}},
+	"all_w":              {Code: "all_w", MsgHdr: "Слова списка \"{{.WLName}}\"", Cmd: cmds["w"], AvailCmds: [][]*tcPkg.Cmd{{cmds["back_to_wl"]}, {cmds["to_main_menu"]}}},
 	"w_addition_frgn":    {Code: "w_addition_frgn", MsgHdr: "Новое слово списка \"{{.WLName}}\"", MsgBody: "Введите слово на изучаемом языке ({{.WLFrgnLang}})", WaitForDataInput: true, NextStateCode: "w_addition_ntv", AvailCmds: [][]*tcPkg.Cmd{{cmds["back_to_wl"]}, {cmds["to_main_menu"]}}},
 	"w_addition_ntv":     {Code: "w_addition_ntv", MsgHdr: "Новое слово списка \"{{.WLName}}\"", MsgBody: "Введите перевод слова на базовом языке ({{.WLNtvLang}})", WaitForDataInput: true, NextStateCode: "wl", AvailCmds: [][]*tcPkg.Cmd{{cmds["back_to_wl"]}, {cmds["to_main_menu"]}}},
 	"w_del_confirmation": {Code: "w_del_confirmation", MsgHdr: "Удаление слова", MsgBody: "Вы действительно хотите удалить слово \"{{.WordForeign}}\" - \"{{.WordNative}}\"?", AvailCmds: [][]*tcPkg.Cmd{{cmds["confirm_w_del"], cmds["reject_w_del"]}}},
 
 	// Learning
-	"all_exercises": {Code: "all_exercises", MsgHdr: "Изучение списка слов \"{{.WLName}}\"", MsgBody: "Выберите упражнение", StateCmd: cmds["xrcs"], AvailCmds: [][]*tcPkg.Cmd{{cmds["back_to_wl"]}, {cmds["to_main_menu"]}}},
-	"xrcs":          {Code: "xrcs", MsgHdr: "Изучение списка слов \"{{.WLName}}\"", MsgBody: "{{.ExerciseTaskText}}", AvailCmds: [][]*tcPkg.Cmd{{cmds["finish_xrcs"]}}},
-	"xrcs_finish":   {Code: "xrcs_finish", MsgHdr: "Изучение списка слов \"{{.WLName}}\"", MsgBody: "На этом пока все! :)", AvailCmds: [][]*tcPkg.Cmd{{cmds["finish_xrcs"]}, {cmds["to_main_menu"]}}},
+	"all_exercises": {Code: "all_exercises", MsgHdr: "Изучение списка слов \"{{.WLName}}\"", MsgBody: "Выберите упражнение", Cmd: cmds["xrcs"], AvailCmds: [][]*tcPkg.Cmd{{cmds["back_to_wl"]}, {cmds["to_main_menu"]}}},
+	"xrcs":          {Code: "xrcs", MsgBody: "{{.ExerciseTaskText}}", AvailCmds: [][]*tcPkg.Cmd{{cmds["finish_xrcs"]}}},
+	"xrcs_finish":   {Code: "xrcs_finish", MsgBody: "{{.PrevTaskResult}}На этом пока все! :)", AvailCmds: [][]*tcPkg.Cmd{{cmds["finish_xrcs"]}, {cmds["to_main_menu"]}}},
 }
 
 var exercises = map[string]*tcPkg.Excersice{
-	"write_frgn": {Code: "write_frgn", Name: "Ввод слов на изучаемом языке", TaskText: "{{.PrevTaskResult}}Введите слово \"{{.WordNative}}\" на изучаемом ({{.WLFrgnLang}}) языке", WaitForDataInput: true},
+	"write_frgn":  {Code: "write_frgn", Name: "Ввод слова на изучаемом языке", TaskText: "{{.PrevTaskResult}}Введите слово \"{{.WordNative}}\" на изучаемом ({{.WLFrgnLang}}) языке", WaitForDataInput: true},
+	"select_frgn": {Code: "select_frgn", Name: "Выбор перевода на изучаемом языке", TaskText: "{{.PrevTaskResult}}Выберите перевод слова \"{{.WordNative}}\" на изучаемом ({{.WLFrgnLang}}) языке", Cmd: cmds["ans"]},
 }

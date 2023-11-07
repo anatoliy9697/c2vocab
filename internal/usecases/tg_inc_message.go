@@ -21,7 +21,7 @@ func MapIncMsgToInner(r res.Resources, tc *tcPkg.Chat, upd *tgbotapi.Update) (ms
 			msg.CmdArgs = cmdParts[1:]
 		}
 		msg.CmdCode = strings.ReplaceAll(cmdParts[0], "/", "")
-		if !tc.State.IsCmdAvail(msg.CmdCode) {
+		if !tc.IsCmdAvail(msg.CmdCode) {
 			msg.ValidationErr = &tcPkg.ErrUnexpectedCmd
 			return msg
 		}
@@ -122,6 +122,10 @@ func ProcessIncMsg(r res.Resources, tc *tcPkg.Chat, msg *tcPkg.IncMsg) (err erro
 		}
 	case msg.Text != "" && tc.State.Code == "xrcs":
 		if err = ProcessUserTaskDataInput(r, tc, msg.Text); err != nil {
+			return err
+		}
+	case msg.Cmd != nil && msg.Cmd.Code == "ans" && tc.State.Code == "xrcs":
+		if err = ProcessUserTaskAnswer(r, tc, msg.CmdArgs[0]); err != nil {
 			return err
 		}
 

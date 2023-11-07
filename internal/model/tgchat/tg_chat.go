@@ -3,6 +3,7 @@ package tgchat
 import (
 	"bytes"
 	"regexp"
+	"strconv"
 	"text/template"
 	"time"
 
@@ -17,7 +18,7 @@ type Chat struct {
 	UserId          int             `json:"userId"`
 	User            *usrPkg.User    `json:"user"`
 	CreatedAt       time.Time       `json:"createdAt"`
-	State           *State          `json:"-"`
+	State           *State          `json:"state"`
 	WLFrgnLang      *commons.Lang   `json:"wlFrgnLang"`
 	WLNtvLang       *commons.Lang   `json:"wlNtvLang"`
 	WLId            int             `json:"wlId"`
@@ -39,7 +40,7 @@ type State struct {
 	MsgFtr           string             `json:"-"`
 	MsgTmpl          *template.Template `json:"-"`
 	WaitForDataInput bool               `json:"-"`
-	StateCmd         *Cmd               `json:"-"`
+	Cmd              *Cmd               `json:"-"`
 	NextStateCode    string             `json:"-"`
 	AvailCmds        [][]*Cmd           `json:"-"`
 }
@@ -57,6 +58,7 @@ type Excersice struct {
 	TaskText         string             `json:"-"`
 	TaskTextTmpl     *template.Template `json:"-"`
 	WaitForDataInput bool               `json:"-"`
+	Cmd              *Cmd               `json:"-"`
 }
 
 type IncMsgValidationErr struct {
@@ -198,6 +200,22 @@ func (tc *Chat) IsWaitForDataInput() bool {
 	return tc.State.WaitForDataInput || (tc.Excersice != nil && tc.Excersice.WaitForDataInput)
 }
 
+func (tc *Chat) AddTrainedWordId(id int) {
+	if tc.TrainedWordsIds == "" {
+		tc.TrainedWordsIds = strconv.Itoa(id)
+	} else {
+		tc.TrainedWordsIds += ", " + strconv.Itoa(id)
+	}
+}
+
+func (tc *Chat) SetPrevTaskResult(result string) {
+	tc.PrevTaskResult = result
+}
+
+func (tc *Chat) IsCmdAvail(cmdCode string) bool {
+	return tc.State.IsCmdAvail(cmdCode) || (tc.Excersice != nil && tc.Excersice.Cmd != nil && tc.Excersice.Cmd.Code == cmdCode)
+}
+
 func (s State) OutMsgTmplContent() string {
 	msgTmpl := s.MsgBody
 	if s.MsgHdr != "" {
@@ -223,7 +241,7 @@ func (s State) IsCmdAvail(cmdCode string) bool {
 		}
 	}
 
-	if s.StateCmd != nil && s.StateCmd.Code == cmdCode {
+	if s.Cmd != nil && s.Cmd.Code == cmdCode {
 		return true
 	}
 

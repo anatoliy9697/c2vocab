@@ -1,7 +1,6 @@
 package usecases
 
 import (
-	"errors"
 	"strconv"
 	"strings"
 	"time"
@@ -10,7 +9,6 @@ import (
 	tcPkg "github.com/anatoliy9697/c2vocab/internal/model/tgchat"
 	wlPkg "github.com/anatoliy9697/c2vocab/internal/model/wordlist"
 	res "github.com/anatoliy9697/c2vocab/internal/resources"
-	"github.com/jackc/pgx/v5"
 )
 
 func ClearTgChaTmpFields(tc *tcPkg.Chat) {
@@ -143,7 +141,7 @@ func SetTgChatExercise(r res.Resources, tc *tcPkg.Chat, excersiceCode string) (e
 		return err
 	}
 
-	if tc.Word, err = r.WLRepo.RandActiveWordByWLIdAndExcludedIds(tc.WL.Id, ""); err != nil {
+	if tc.Word, err = r.WLRepo.NextWordForTraining(tc.WL.Id, ""); err != nil {
 		return err
 	}
 	tc.WordId = tc.Word.Id
@@ -180,27 +178,27 @@ func ProcessUserTaskDataInput(r res.Resources, tc *tcPkg.Chat, usrAnswer string)
 
 	}
 
-	if tc.TrainedWordsIds == "" {
-		tc.TrainedWordsIds = strconv.Itoa(tc.WordId)
-	} else {
-		tc.TrainedWordsIds += ", " + strconv.Itoa(tc.WordId)
+	tc.SetPrevTaskResult(prevTaskResult)
+
+	tc.AddTrainedWordId(tc.WordId)
+
+	SetTgChatExerciseNextWord(r, tc)
+
+	return nil
+}
+
+func ProcessUserTaskAnswer(r res.Resources, tc *tcPkg.Chat, usrAnswer string) (err error) {
+	prevTaskResult := "Правильно!"
+
+	if usrAnswer == "0" {
+		prevTaskResult = "Неправильно. Правильный ответ: \"" + tc.Word.Foreign + "\""
 	}
-	tc.PrevTaskResult = prevTaskResult
-	if tc.Word, err = r.WLRepo.RandActiveWordByWLIdAndExcludedIds(tc.WL.Id, tc.TrainedWordsIds); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) { // TODO: тут лучше вынести в отдельную функцию
-			var s *tcPkg.State
-			if s, err = r.TcRepo.StateByCode("xrcs_finish"); err != nil {
-				return err
-			}
-			tc.SetState(s)
-			ClearExerciseFields(tc)
-		} else {
-			return err
-		}
-	}
-	if tc.Word != nil {
-		tc.WordId = tc.Word.Id
-	}
+
+	tc.SetPrevTaskResult(prevTaskResult)
+
+	tc.AddTrainedWordId(tc.WordId)
+
+	SetTgChatExerciseNextWord(r, tc)
 
 	return nil
 }
