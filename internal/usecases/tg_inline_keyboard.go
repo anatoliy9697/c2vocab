@@ -86,10 +86,15 @@ func AllExercisesTgInlineKeyboard(r res.Resources, tc *tcPkg.Chat) (ikRows [][]t
 	return ikRows
 }
 
-func WordForeignSelectionExerciseTgInlineKeyboard(r res.Resources, tc *tcPkg.Chat) (ikRows [][]tgbotapi.InlineKeyboardButton, err error) {
+func WordSelectionExerciseTgInlineKeyboard(r res.Resources, tc *tcPkg.Chat, frgnOpts bool) (ikRows [][]tgbotapi.InlineKeyboardButton, err error) {
 	var ansOpts []wlPkg.AnswerOption
 
-	if ansOpts, err = r.WLRepo.WordSelectionAnswerOptions(tc.Word, true, tc.WL.FrgnLang.Code, tc.UserId, 4); err != nil {
+	if frgnOpts {
+		ansOpts, err = r.WLRepo.WordSelectionAnswerOptions(tc.Word, true, tc.WL.FrgnLang.Code, tc.UserId, 4)
+	} else {
+		ansOpts, err = r.WLRepo.WordSelectionAnswerOptions(tc.Word, false, tc.WL.NtvLang.Code, tc.UserId, 4)
+	}
+	if err != nil {
 		return nil, err
 	}
 
@@ -111,7 +116,11 @@ func WordForeignSelectionExerciseTgInlineKeyboard(r res.Resources, tc *tcPkg.Cha
 func TgInlineKeyboradExerciseCmdRows(r res.Resources, tc *tcPkg.Chat) (ikRows [][]tgbotapi.InlineKeyboardButton, err error) {
 	switch tc.Excersice.Code {
 	case "select_frgn":
-		if ikRows, err = WordForeignSelectionExerciseTgInlineKeyboard(r, tc); err != nil {
+		if ikRows, err = WordSelectionExerciseTgInlineKeyboard(r, tc, true); err != nil {
+			return nil, err
+		}
+	case "select_ntv":
+		if ikRows, err = WordSelectionExerciseTgInlineKeyboard(r, tc, false); err != nil {
 			return nil, err
 		}
 	default:

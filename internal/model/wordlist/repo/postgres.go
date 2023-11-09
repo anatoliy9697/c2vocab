@@ -340,12 +340,12 @@ func (r pgRepo) NextWordForTraining(wlId int, excludedIds string) (*wlPkg.Word, 
 	}, nil
 }
 
-func (r pgRepo) WordSelectionAnswerOptions(word *wlPkg.Word, isFrgn bool, langCode string, userId, optsLimit int) (opts []wlPkg.AnswerOption, err error) {
+func (r pgRepo) WordSelectionAnswerOptions(word *wlPkg.Word, frgnOpts bool, langCode string, userId, optsLimit int) (opts []wlPkg.AnswerOption, err error) {
 	opts = make([]wlPkg.AnswerOption, 0, optsLimit)
 
 	defer func() {
 		w := ""
-		if isFrgn {
+		if frgnOpts {
 			w = word.Foreign
 		} else {
 			w = word.Native
