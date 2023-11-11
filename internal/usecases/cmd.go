@@ -166,16 +166,22 @@ func ProcessUserTaskDataInput(r res.Resources, tc *tcPkg.Chat, usrAnswer string)
 	usrAnswer = strings.ToLower(usrAnswer)
 
 	prevTaskResult := "Правильно!"
+	isAnswerCorrect := true
 
 	switch tc.ExcersiceCode {
 
 	case "write_frgn":
 		if usrAnswer != strings.ToLower(tc.Word.Foreign) {
 			prevTaskResult = "Неправильно. Правильный ответ: \"" + tc.Word.Foreign + "\""
+			isAnswerCorrect = false
 		}
 
 	default:
 
+	}
+
+	if err = RegistrateWordTraining(r, tc.Word, tc.UserId, isAnswerCorrect); err != nil {
+		return err
 	}
 
 	tc.SetPrevTaskResult(prevTaskResult)
@@ -189,9 +195,15 @@ func ProcessUserTaskDataInput(r res.Resources, tc *tcPkg.Chat, usrAnswer string)
 
 func ProcessUserTaskAnswer(r res.Resources, tc *tcPkg.Chat, usrAnswer string) (err error) {
 	prevTaskResult := "Правильно!"
+	isAnswerCorrect := true
 
 	if usrAnswer == "0" {
 		prevTaskResult = "Неправильно. Правильный ответ: \"" + tc.Word.Foreign + "\""
+		isAnswerCorrect = false
+	}
+
+	if err = RegistrateWordTraining(r, tc.Word, tc.UserId, isAnswerCorrect); err != nil {
+		return err
 	}
 
 	tc.SetPrevTaskResult(prevTaskResult)

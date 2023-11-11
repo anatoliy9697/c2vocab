@@ -22,10 +22,11 @@ type WordList struct {
 
 type Word struct {
 	Id        int       `json:"id"`
+	Active    bool      `json:"active"`
 	Foreign   string    `json:"foreign"`
 	Native    string    `json:"native"`
+	MemDegree float64   `json:"memDegree"`
 	WLId      int       `json:"wlId"`
-	Active    bool      `json:"active"`
 	CreatedAt time.Time `json:"createdAt"`
 }
 

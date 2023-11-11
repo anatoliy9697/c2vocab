@@ -394,3 +394,72 @@ func (r pgRepo) WordSelectionAnswerOptions(word *wlPkg.Word, frgnOpts bool, lang
 
 	return
 }
+
+func (r pgRepo) IsWordStatExists(wordId, userId int) (bool, error) {
+	conn, err := r.pool.Acquire(r.ctx)
+	if err != nil {
+		return false, err
+	}
+	defer conn.Release()
+
+	sql := `
+		SELECT COUNT(*)
+		FROM c2v_word_stat
+		WHERE word_id = $1 AND user_id = $2
+	`
+	var count int
+	err = conn.QueryRow(r.ctx, sql, wordId, userId).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+
+	if count > 0 {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func (r pgRepo) CreateWordStat(wordId, userId int, isAnswerCorrect bool) error {
+	conn, err := r.pool.Acquire(r.ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	sql := `
+		INSERT INTO c2v_word_stat (word_id, last_training_dt, trainings_num, correct_answers_num, fc_trainings_num, fc_next_training_dt, user_id)
+		VALUES ($1, CURRENT_TIMESTAMP, 1, CASE WHEN $2 IS TRUE THEN 1 ELSE 0 END, 1, CURRENT_TIMESTAMP + interval '180 minutes', $3)
+	`
+	_, err = conn.Exec(r.ctx, sql, wordId, isAnswerCorrect, userId)
+
+	return err
+}
+
+func (r pgRepo) RegistrateWordTraining(wordId, userId int, isAnswerCorrect bool) error {
+	conn, err := r.pool.Acquire(r.ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	sql := `
+		UPDATE c2v_word_stat
+		SET (
+			last_training_dt
+			, trainings_num
+			, correct_answers_num
+			, fc_trainings_num
+			, fc_next_training_dt
+		) = (
+			CURRENT_TIMESTAMP
+			, trainings_num + 1
+			, CASE WHEN $2 IS TRUE THEN correct_answers_num + 1 ELSE correct_answers_num END
+			, CASE WHEN $2 IS TRUE AND CURRENT_TIMESTAMP >= fc_next_training_dt THEN fc_trainings_num + 1 ELSE fc_trainings_num END
+			, CASE WHEN $2 IS TRUE AND CURRENT_TIMESTAMP >= fc_next_training_dt THEN fc_next_training_dt + (interval '1 minute' * 180 * power(3, fc_trainings_num)) ELSE fc_next_training_dt END
+		) WHERE word_id = $1 AND user_id = $3
+	`
+	_, err = conn.Exec(r.ctx, sql, wordId, isAnswerCorrect, userId)
+
+	return err
+}

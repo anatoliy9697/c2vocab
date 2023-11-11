@@ -18,6 +18,9 @@ type Repo interface {
 	UpdateWord(*wlPkg.Word) error
 	NextWordForTraining(int, string) (*wlPkg.Word, error)
 	WordSelectionAnswerOptions(*wlPkg.Word, bool, string, int, int) ([]wlPkg.AnswerOption, error)
+	IsWordStatExists(int, int) (bool, error)
+	CreateWordStat(int, int, bool) error
+	RegistrateWordTraining(int, int, bool) error
 }
 
 func Init(c context.Context, p *pgxpool.Pool) Repo {
