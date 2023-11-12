@@ -10,11 +10,11 @@ import (
 type Repo interface {
 	SaveNewWL(*wlPkg.WordList) error
 	ActiveWLByOwnerId(int) ([]*wlPkg.WordList, error)
-	WLById(int) (*wlPkg.WordList, error)
+	WLByIdAndUserId(int, int) (*wlPkg.WordList, error)
 	UpdateWL(*wlPkg.WordList) error
 	SaveNewWord(*wlPkg.Word) error
 	ActiveWordsByWLId(int) ([]*wlPkg.Word, error)
-	WordById(int) (*wlPkg.Word, error)
+	WordByIdAndUserId(int, int) (*wlPkg.Word, error)
 	UpdateWord(*wlPkg.Word) error
 	NextWordForTraining(int, string) (*wlPkg.Word, error)
 	WordSelectionAnswerOptions(*wlPkg.Word, bool, string, int, int) ([]wlPkg.AnswerOption, error)

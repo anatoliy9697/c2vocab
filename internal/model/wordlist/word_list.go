@@ -10,24 +10,25 @@ import (
 var random = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 type WordList struct {
-	Id        int           `json:"id"`
-	Active    bool          `json:"active"`
-	Name      string        `json:"name"`
-	FrgnLang  *commons.Lang `json:"frgnLang"`
-	NtvLang   *commons.Lang `json:"ntvLang"`
-	WordsNum  int           `json:"wordsNum"`
-	OwnerId   int           `json:"ownerId"`
-	CreatedAt time.Time     `json:"createdAt"`
+	Id            int           `json:"id"`
+	Active        bool          `json:"active"`
+	Name          string        `json:"name"`
+	FrgnLang      *commons.Lang `json:"frgnLang"`
+	NtvLang       *commons.Lang `json:"ntvLang"`
+	WordsNum      int           `json:"wordsNum"`
+	MemPercentage int           `json:"memPercentage"`
+	OwnerId       int           `json:"ownerId"`
+	CreatedAt     time.Time     `json:"createdAt"`
 }
 
 type Word struct {
-	Id        int       `json:"id"`
-	Active    bool      `json:"active"`
-	Foreign   string    `json:"foreign"`
-	Native    string    `json:"native"`
-	MemDegree float64   `json:"memDegree"`
-	WLId      int       `json:"wlId"`
-	CreatedAt time.Time `json:"createdAt"`
+	Id            int       `json:"id"`
+	Active        bool      `json:"active"`
+	Foreign       string    `json:"foreign"`
+	Native        string    `json:"native"`
+	MemPercentage int       `json:"memPercentage"`
+	WLId          int       `json:"wlId"`
+	CreatedAt     time.Time `json:"createdAt"`
 }
 
 type AnswerOption struct {

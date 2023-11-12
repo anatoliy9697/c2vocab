@@ -31,11 +31,11 @@ func ProcessErr(r res.Resources, tc *tcPkg.Chat, usr *usrPkg.User, err error) {
 			tc.User = usr
 
 			if tc.WLId != 0 {
-				tc.WL, _ = r.WLRepo.WLById(tc.WLId)
+				tc.WL, _ = r.WLRepo.WLByIdAndUserId(tc.WLId, tc.UserId)
 			}
 
 			if tc.WordId != 0 {
-				tc.Word, _ = r.WLRepo.WordById(tc.WordId)
+				tc.Word, _ = r.WLRepo.WordByIdAndUserId(tc.WordId, tc.UserId)
 			}
 
 			if tc.ExcersiceCode != "" {

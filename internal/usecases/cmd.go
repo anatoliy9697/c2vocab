@@ -71,7 +71,7 @@ func SetTgChatWL(r res.Resources, tc *tcPkg.Chat, wlIdStr string) (err error) {
 		return err
 	}
 
-	if tc.WL, err = r.WLRepo.WLById(tc.WLId); err != nil {
+	if tc.WL, err = r.WLRepo.WLByIdAndUserId(tc.WLId, tc.UserId); err != nil {
 		return err
 	}
 
@@ -116,7 +116,7 @@ func SetTgChatWord(r res.Resources, tc *tcPkg.Chat, wordIdStr string) (err error
 		return err
 	}
 
-	if tc.Word, err = r.WLRepo.WordById(tc.WordId); err != nil {
+	if tc.Word, err = r.WLRepo.WordByIdAndUserId(tc.WordId, tc.UserId); err != nil {
 		return err
 	}
 

@@ -79,17 +79,19 @@ type IncMsg struct {
 }
 
 type outMsgTmplArgs struct {
-	ErrText          string
-	WLName           string
-	UsrTgFName       string
-	UsrTgLName       string
-	WLFrgnLang       string
-	WLNtvLang        string
-	WordsNum         int
-	WordForeign      string
-	WordNative       string
-	ExerciseTaskText string
-	PrevTaskResult   string
+	ErrText           string
+	WLName            string
+	UsrTgFName        string
+	UsrTgLName        string
+	WLFrgnLang        string
+	WLNtvLang         string
+	WordsNum          int
+	WordForeign       string
+	WordNative        string
+	ExerciseTaskText  string
+	PrevTaskResult    string
+	WordMemPercentage int
+	WLMemPercentage   int
 }
 
 var (
@@ -153,6 +155,10 @@ func (tc *Chat) OutMsgArgs(tmpl string, errText string) (args *outMsgTmplArgs, e
 				if tc.PrevTaskResult != "" {
 					args.PrevTaskResult = tc.PrevTaskResult + "\n\n"
 				}
+			case "WordMemPercentage":
+				args.WordMemPercentage = tc.Word.MemPercentage
+			case "WLMemPercentage":
+				args.WLMemPercentage = tc.WL.MemPercentage
 			}
 		}
 	}

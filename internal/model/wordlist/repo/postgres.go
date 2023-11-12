@@ -93,13 +93,30 @@ func (r pgRepo) ActiveWLByOwnerId(ownerId int) ([]*wlPkg.WordList, error) {
 	return wls, nil
 }
 
-func (r pgRepo) WLById(id int) (*wlPkg.WordList, error) {
+func (r pgRepo) WLByIdAndUserId(wlId, userId int) (*wlPkg.WordList, error) {
 	conn, err := r.pool.Acquire(r.ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Release()
 
+	mem_percentage_formula := `
+		power(
+			2.718
+			, -1 * (EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - last_cor_ans_dt)) / 60) / (2078 * power(3, fc_trainings_num - 1))
+		) * 100
+	`
+	mem_percentage_sql := `
+		SELECT 
+			ROUND(AVG(CASE
+				WHEN ws.fc_trainings_num IS NOT NULL AND ws.last_cor_ans_dt IS NOT NULL
+				THEN ` + mem_percentage_formula + `
+				ELSE 0
+			END))::integer
+		FROM c2v_word w
+		LEFT JOIN c2v_word_stat ws ON ws.word_id = w.id AND ws.user_id = $2
+		WHERE w.wl_id = $1 AND w.active IS TRUE
+	`
 	sql := `
 		SELECT
 			active
@@ -107,6 +124,7 @@ func (r pgRepo) WLById(id int) (*wlPkg.WordList, error) {
 			, frgn_lang_code
 			, ntv_lang_code
 			, (SELECT COUNT(*) FROM c2v_word WHERE wl_id = $1 AND active IS TRUE) AS words_num
+			, COALESCE((` + mem_percentage_sql + `), 0) AS mem_percentage
 			, owner_id
 			, created_at
 		FROM c2v_word_list
@@ -114,14 +132,15 @@ func (r pgRepo) WLById(id int) (*wlPkg.WordList, error) {
 	`
 	var active bool
 	var name, frgnLangCode, ntvLangCode string
-	var wordsNum, ownerId int
+	var wordsNum, ownerId, memPercentage int
 	var createdAt time.Time
-	err = conn.QueryRow(r.ctx, sql, id).Scan(
+	err = conn.QueryRow(r.ctx, sql, wlId, userId).Scan(
 		&active,
 		&name,
 		&frgnLangCode,
 		&ntvLangCode,
 		&wordsNum,
+		&memPercentage,
 		&ownerId,
 		&createdAt,
 	)
@@ -130,14 +149,15 @@ func (r pgRepo) WLById(id int) (*wlPkg.WordList, error) {
 	}
 
 	return &wlPkg.WordList{
-		Id:        id,
-		Active:    active,
-		Name:      name,
-		FrgnLang:  commons.LangByCode(frgnLangCode),
-		NtvLang:   commons.LangByCode(ntvLangCode),
-		WordsNum:  wordsNum,
-		OwnerId:   ownerId,
-		CreatedAt: createdAt,
+		Id:            wlId,
+		Active:        active,
+		Name:          name,
+		FrgnLang:      commons.LangByCode(frgnLangCode),
+		NtvLang:       commons.LangByCode(ntvLangCode),
+		WordsNum:      wordsNum,
+		MemPercentage: memPercentage,
+		OwnerId:       ownerId,
+		CreatedAt:     createdAt,
 	}, nil
 }
 
@@ -233,18 +253,33 @@ func (r pgRepo) ActiveWordsByWLId(wlId int) ([]*wlPkg.Word, error) {
 	return words, nil
 }
 
-func (r pgRepo) WordById(id int) (*wlPkg.Word, error) {
+func (r pgRepo) WordByIdAndUserId(wordId, userId int) (*wlPkg.Word, error) {
 	conn, err := r.pool.Acquire(r.ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Release()
 
+	word_stat_formula := `
+		ROUND(power(
+			2.718
+			, -1 * (EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - last_cor_ans_dt)) / 60) / (2078 * power(3, fc_trainings_num - 1))
+		) * 100)::integer
+	`
+	word_stat_sql := `
+		SELECT
+			CASE
+				WHEN fc_trainings_num IS NOT NULL AND last_cor_ans_dt IS NOT NULL THEN ` + word_stat_formula + ` ELSE 0
+			END
+		FROM c2v_word_stat
+		WHERE word_id = $1 AND user_id = $2
+	`
 	sql := `
 		SELECT
 			active
 			, frgn
 			, ntv
+			, COALESCE((` + word_stat_sql + `), 0) AS mem_percentage
 			, created_at
 		FROM c2v_word
 		WHERE id = $1
@@ -252,10 +287,12 @@ func (r pgRepo) WordById(id int) (*wlPkg.Word, error) {
 	var active bool
 	var frgn, ntv string
 	var createdAt time.Time
-	err = conn.QueryRow(r.ctx, sql, id).Scan(
+	var memPercentage int
+	err = conn.QueryRow(r.ctx, sql, wordId, userId).Scan(
 		&active,
 		&frgn,
 		&ntv,
+		&memPercentage,
 		&createdAt,
 	)
 	if err != nil {
@@ -263,11 +300,12 @@ func (r pgRepo) WordById(id int) (*wlPkg.Word, error) {
 	}
 
 	return &wlPkg.Word{
-		Id:        id,
-		Active:    active,
-		Foreign:   frgn,
-		Native:    ntv,
-		CreatedAt: createdAt,
+		Id:            wordId,
+		Active:        active,
+		Foreign:       frgn,
+		Native:        ntv,
+		MemPercentage: memPercentage,
+		CreatedAt:     createdAt,
 	}, nil
 }
 
@@ -428,8 +466,25 @@ func (r pgRepo) CreateWordStat(wordId, userId int, isAnswerCorrect bool) error {
 	defer conn.Release()
 
 	sql := `
-		INSERT INTO c2v_word_stat (word_id, last_training_dt, trainings_num, correct_answers_num, fc_trainings_num, fc_next_training_dt, user_id)
-		VALUES ($1, CURRENT_TIMESTAMP, 1, CASE WHEN $2 IS TRUE THEN 1 ELSE 0 END, 1, CURRENT_TIMESTAMP + interval '180 minutes', $3)
+		INSERT INTO c2v_word_stat (
+			word_id
+			, last_training_dt
+			, trainings_num
+			, correct_answers_num
+			, last_cor_ans_dt
+			, fc_trainings_num
+			, fc_next_training_dt
+			, user_id
+		) VALUES (
+			$1
+			, CURRENT_TIMESTAMP
+			, 1
+			, CASE WHEN $2 IS TRUE THEN 1 ELSE 0 END
+			, CASE WHEN $2 IS TRUE THEN CURRENT_TIMESTAMP ELSE NULL END
+			, CASE WHEN $2 IS TRUE THEN 1 ELSE NULL END
+			, CASE WHEN $2 IS TRUE THEN CURRENT_TIMESTAMP + interval '180 minutes' ELSE NULL END
+			, $3
+		)
 	`
 	_, err = conn.Exec(r.ctx, sql, wordId, isAnswerCorrect, userId)
 
@@ -443,20 +498,42 @@ func (r pgRepo) RegistrateWordTraining(wordId, userId int, isAnswerCorrect bool)
 	}
 	defer conn.Release()
 
+	fc_trainings_num := `
+		CASE
+			WHEN $2 IS TRUE AND fc_next_training_dt IS NOT NULL AND CURRENT_TIMESTAMP >= fc_next_training_dt
+				THEN COALESCE(fc_trainings_num, 0) + 1
+			WHEN $2 IS TRUE AND fc_next_training_dt IS NULL
+				THEN 1
+			ELSE
+				fc_trainings_num
+		END
+	`
+	fc_next_training_dt := `
+		CASE
+			WHEN $2 IS TRUE AND fc_next_training_dt IS NOT NULL AND CURRENT_TIMESTAMP >= fc_next_training_dt
+				THEN CURRENT_TIMESTAMP + (interval '1 minute' * 180 * power(3, COALESCE(fc_trainings_num, 0)))
+			WHEN $2 IS TRUE AND fc_next_training_dt IS NULL
+				THEN CURRENT_TIMESTAMP + (interval '1 minute' * 180)
+			ELSE
+				fc_next_training_dt
+		END
+	`
 	sql := `
 		UPDATE c2v_word_stat
 		SET (
 			last_training_dt
 			, trainings_num
 			, correct_answers_num
+			, last_cor_ans_dt
 			, fc_trainings_num
 			, fc_next_training_dt
 		) = (
 			CURRENT_TIMESTAMP
 			, trainings_num + 1
 			, CASE WHEN $2 IS TRUE THEN correct_answers_num + 1 ELSE correct_answers_num END
-			, CASE WHEN $2 IS TRUE AND CURRENT_TIMESTAMP >= fc_next_training_dt THEN fc_trainings_num + 1 ELSE fc_trainings_num END
-			, CASE WHEN $2 IS TRUE AND CURRENT_TIMESTAMP >= fc_next_training_dt THEN fc_next_training_dt + (interval '1 minute' * 180 * power(3, fc_trainings_num)) ELSE fc_next_training_dt END
+			, CASE WHEN $2 IS TRUE THEN CURRENT_TIMESTAMP ELSE last_cor_ans_dt END
+			, ` + fc_trainings_num + `
+			, ` + fc_next_training_dt + `
 		) WHERE word_id = $1 AND user_id = $3
 	`
 	_, err = conn.Exec(r.ctx, sql, wordId, isAnswerCorrect, userId)

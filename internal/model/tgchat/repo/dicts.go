@@ -48,7 +48,7 @@ var states = map[string]*tcPkg.State{
 	"main_menu": {Code: "main_menu", MsgHdr: "Главное меню", MsgBody: "Привет, {{.UsrTgFName}} {{.UsrTgLName}}!", AvailCmds: [][]*tcPkg.Cmd{{cmds["create_wl"], cmds["all_wl"]}}},
 
 	// Word list
-	"wl":                    {Code: "wl", MsgHdr: "Список слов \"{{.WLName}}\"", MsgBody: "Изучаемый язык: {{.WLFrgnLang}}\nБазовый язык: {{.WLNtvLang}}\nВсего слов: {{.WordsNum}} шт.", AvailCmds: [][]*tcPkg.Cmd{{cmds["learn_wl"]}, {cmds["all_w"]}, {cmds["add_w"]}, {cmds["delete_wl"], cmds["edit_wl"]}, {cmds["back_to_all_wl"]}, {cmds["to_main_menu"]}}},
+	"wl":                    {Code: "wl", MsgHdr: "Список слов \"{{.WLName}}\"", MsgBody: "Изучаемый язык: {{.WLFrgnLang}}\nБазовый язык: {{.WLNtvLang}}\n\nВсего слов: {{.WordsNum}} шт.\nПроцент усвоения: {{.WLMemPercentage}}%", AvailCmds: [][]*tcPkg.Cmd{{cmds["learn_wl"]}, {cmds["all_w"]}, {cmds["add_w"]}, {cmds["delete_wl"], cmds["edit_wl"]}, {cmds["back_to_all_wl"]}, {cmds["to_main_menu"]}}},
 	"all_wl":                {Code: "all_wl", MsgHdr: "Мои списки", Cmd: cmds["wl"], AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
 	"wl_creation_frgn_lang": {Code: "wl_creation_frgn_lang", MsgHdr: "Создание списка слов", MsgBody: "Выберите изучаемый язык", Cmd: cmds["wl_creation_frgn_lang"], AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
 	"wl_creation_ntv_lang":  {Code: "wl_creation_ntv_lang", MsgHdr: "Создание списка слов", MsgBody: "Выберите базовый (родной) язык", Cmd: cmds["wl_creation_ntv_lang"], AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
@@ -59,7 +59,7 @@ var states = map[string]*tcPkg.State{
 	"wl_del_confirmation":   {Code: "wl_del_confirmation", MsgHdr: "Удаление списка слов", MsgBody: "Вы действительно хотите удалить список \"{{.WLName}}\"?", AvailCmds: [][]*tcPkg.Cmd{{cmds["confirm_wl_del"], cmds["reject_wl_del"]}}},
 
 	// Word
-	"w":                  {Code: "w", MsgHdr: "\"{{.WordForeign}}\" - \"{{.WordNative}}\"", MsgBody: "Список слов: \"{{.WLName}}\"\nИзучаемый язык: {{.WLFrgnLang}}\nБазовый язык: {{.WLNtvLang}}", AvailCmds: [][]*tcPkg.Cmd{{cmds["delete_w"]}, {cmds["back_to_all_w"]}, {cmds["to_main_menu"]}}},
+	"w":                  {Code: "w", MsgHdr: "\"{{.WordForeign}}\" - \"{{.WordNative}}\"", MsgBody: "Список слов: \"{{.WLName}}\"\nИзучаемый язык: {{.WLFrgnLang}}\nБазовый язык: {{.WLNtvLang}}\n\nПроцент усвоения: {{.WordMemPercentage}}%", AvailCmds: [][]*tcPkg.Cmd{{cmds["delete_w"]}, {cmds["back_to_all_w"]}, {cmds["to_main_menu"]}}},
 	"all_w":              {Code: "all_w", MsgHdr: "Слова списка \"{{.WLName}}\"", Cmd: cmds["w"], AvailCmds: [][]*tcPkg.Cmd{{cmds["back_to_wl"]}, {cmds["to_main_menu"]}}},
 	"w_addition_frgn":    {Code: "w_addition_frgn", MsgHdr: "Новое слово списка \"{{.WLName}}\"", MsgBody: "Введите слово на изучаемом языке ({{.WLFrgnLang}})", WaitForDataInput: true, NextStateCode: "w_addition_ntv", AvailCmds: [][]*tcPkg.Cmd{{cmds["back_to_wl"]}, {cmds["to_main_menu"]}}},
 	"w_addition_ntv":     {Code: "w_addition_ntv", MsgHdr: "Новое слово списка \"{{.WLName}}\"", MsgBody: "Введите перевод слова на базовом языке ({{.WLNtvLang}})", WaitForDataInput: true, NextStateCode: "wl", AvailCmds: [][]*tcPkg.Cmd{{cmds["back_to_wl"]}, {cmds["to_main_menu"]}}},
