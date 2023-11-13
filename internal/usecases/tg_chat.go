@@ -2,7 +2,6 @@ package usecases
 
 import (
 	"errors"
-	"time"
 
 	tcPkg "github.com/anatoliy9697/c2vocab/internal/model/tgchat"
 	usrPkg "github.com/anatoliy9697/c2vocab/internal/model/user"
@@ -19,10 +18,9 @@ func MapToInnerTgChatAndSave(r res.Resources, outerTC *tgbotapi.Chat, u *usrPkg.
 	if tc == nil {
 		state, _ := r.TcRepo.StartState()
 		tc = &tcPkg.Chat{
-			TgId:      int(outerTC.ID),
-			UserId:    u.Id,
-			State:     state,
-			CreatedAt: time.Now(),
+			TgId:   int(outerTC.ID),
+			UserId: u.Id,
+			State:  state,
 		}
 		if err = r.TcRepo.SaveNewTgChat(tc); err != nil {
 			return nil, err

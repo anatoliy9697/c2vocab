@@ -45,7 +45,7 @@ func ProcessErr(r res.Resources, tc *tcPkg.Chat, usr *usrPkg.User, err error) {
 			// Sending replay message, got by non-changed by current request, tgChat state with error info
 			tc.BotLastMsgId = prevBotLastMsgId
 			SendReplyMsg(r, tc, errText)
-			r.TcRepo.UpdateTgChat(tc)
+			r.TcRepo.UpdateTgChat(tc, true)
 		}
 	}
 }

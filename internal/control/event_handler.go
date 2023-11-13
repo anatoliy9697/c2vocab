@@ -55,7 +55,7 @@ func (eh EventHandler) Run(done chan string, upd *tgbotapi.Update) {
 
 	eh.Res.Logger.Info("TgChat updating in DB", "tgChat", tc)
 
-	if err = eh.Res.TcRepo.UpdateTgChat(tc); err != nil {
+	if err = eh.Res.TcRepo.UpdateTgChat(tc, true); err != nil {
 		return
 	}
 }

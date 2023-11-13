@@ -12,7 +12,7 @@ type Repo interface {
 	StartState() (*tcPkg.State, error)
 	TgChatByUserId(int) (*tcPkg.Chat, error)
 	StateByCode(string) (*tcPkg.State, error)
-	UpdateTgChat(*tcPkg.Chat) error
+	UpdateTgChat(*tcPkg.Chat, bool) error
 	CmdByCode(string) (*tcPkg.Cmd, error)
 	AllExercises() []*tcPkg.Excersice
 	ExcersiceByCode(string) (*tcPkg.Excersice, error)

@@ -3,7 +3,6 @@ package repo
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/anatoliy9697/c2vocab/internal/model/commons"
 	tcPkg "github.com/anatoliy9697/c2vocab/internal/model/tgchat"
@@ -36,14 +35,13 @@ func (r pgRepo) SaveNewTgChat(tc *tcPkg.Chat) error {
 	defer conn.Release()
 
 	sql := `
-		INSERT INTO c2v_tg_chat(tg_id, user_id, state_code, created_at)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO c2v_tg_chat(tg_id, user_id, state_code, usr_last_act_dt, created_at)
+		VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`
 	_, err = conn.Exec(r.c, sql,
 		tc.TgId,
 		tc.UserId,
 		tc.State.Code,
-		tc.CreatedAt,
 	)
 	if err != nil {
 		return err
@@ -60,12 +58,10 @@ func (r pgRepo) TgChatByUserId(usrId int) (*tcPkg.Chat, error) {
 	defer conn.Release()
 
 	var tgId, wlId, wordId, botLastMsgId int
-	var createdAt time.Time
 	var stateCode, wlFrgnLangCode, wlNtvLangCode, wordFrgn, excersiceCode, trainedWordsIds string
 	sql := `
 		SELECT
 			tg_id
-			, created_at
 			, state_code
 			, COALESCE(wl_frgn_lang_code, '')
 			, COALESCE(wl_ntv_lang_code, '')
@@ -80,7 +76,6 @@ func (r pgRepo) TgChatByUserId(usrId int) (*tcPkg.Chat, error) {
 	`
 	err = conn.QueryRow(r.c, sql, usrId).Scan(
 		&tgId,
-		&createdAt,
 		&stateCode,
 		&wlFrgnLangCode,
 		&wlNtvLangCode,
@@ -105,7 +100,6 @@ func (r pgRepo) TgChatByUserId(usrId int) (*tcPkg.Chat, error) {
 
 	return &tcPkg.Chat{
 		TgId:            tgId,
-		CreatedAt:       createdAt,
 		UserId:          usrId,
 		State:           state,
 		WLFrgnLang:      commons.LangByCode(wlFrgnLangCode),
@@ -119,7 +113,7 @@ func (r pgRepo) TgChatByUserId(usrId int) (*tcPkg.Chat, error) {
 	}, nil
 }
 
-func (r pgRepo) UpdateTgChat(tc *tcPkg.Chat) error {
+func (r pgRepo) UpdateTgChat(tc *tcPkg.Chat, usrActivity bool) error {
 	conn, err := r.p.Acquire(r.c)
 	if err != nil {
 		return err
@@ -134,12 +128,37 @@ func (r pgRepo) UpdateTgChat(tc *tcPkg.Chat) error {
 		wlNtvLangCode = tc.WLNtvLang.Code
 	}
 	sql := `
-		UPDATE c2v_tg_chat SET (tg_id, state_code, wl_frgn_lang_code, wl_ntv_lang_code, wl_id, word_frgn, word_id, exercise_code, trained_words_ids, bot_last_msg_id) = ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-		WHERE user_id = $11
+		UPDATE c2v_tg_chat SET (
+			tg_id
+			, state_code
+			, usr_last_act_dt
+			, wl_frgn_lang_code
+			, wl_ntv_lang_code
+			, wl_id
+			, word_frgn
+			, word_id
+			, exercise_code
+			, trained_words_ids
+			, bot_last_msg_id
+		) = (
+			$1
+			, $2
+			, CASE WHEN $3 IS TRUE THEN CURRENT_TIMESTAMP ELSE usr_last_act_dt END
+			, $4
+			, $5
+			, $6
+			, $7
+			, $8
+			, $9
+			, $10
+			, $11
+		)
+		WHERE user_id = $12
 	`
 	_, err = conn.Exec(r.c, sql,
 		tc.TgId,
 		tc.State.Code,
+		usrActivity,
 		wlFrgnLangCode,
 		wlNtvLangCode,
 		tc.WLId,

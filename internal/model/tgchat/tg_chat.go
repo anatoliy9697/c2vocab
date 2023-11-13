@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"strconv"
 	"text/template"
-	"time"
 
 	"github.com/anatoliy9697/c2vocab/internal/model/commons"
 	usrPkg "github.com/anatoliy9697/c2vocab/internal/model/user"
@@ -17,7 +16,6 @@ type Chat struct {
 	TgId            int             `json:"tgId"`
 	UserId          int             `json:"userId"`
 	User            *usrPkg.User    `json:"user"`
-	CreatedAt       time.Time       `json:"createdAt"`
 	State           *State          `json:"state"`
 	WLFrgnLang      *commons.Lang   `json:"wlFrgnLang"`
 	WLNtvLang       *commons.Lang   `json:"wlNtvLang"`
