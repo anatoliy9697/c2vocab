@@ -491,7 +491,7 @@ func (r pgRepo) CreateWordStat(wordId, userId int, isAnswerCorrect bool) error {
 	return err
 }
 
-func (r pgRepo) RegistrateWordTraining(wordId, userId int, isAnswerCorrect bool) error {
+func (r pgRepo) RegistrateWordTraining(wordId, userId int, isAnswerCorrect bool, memPercentageDowngrade int) error {
 	conn, err := r.pool.Acquire(r.ctx)
 	if err != nil {
 		return err
@@ -500,20 +500,24 @@ func (r pgRepo) RegistrateWordTraining(wordId, userId int, isAnswerCorrect bool)
 
 	fc_trainings_num := `
 		CASE
-			WHEN $2 IS TRUE AND fc_next_training_dt IS NOT NULL AND CURRENT_TIMESTAMP >= fc_next_training_dt
-				THEN COALESCE(fc_trainings_num, 0) + 1
-			WHEN $2 IS TRUE AND fc_next_training_dt IS NULL
+			WHEN $2 IS TRUE AND (fc_next_training_dt IS NULL OR $4 = -1 OR COALESCE(fc_trainings_num, 0) - $4 <= 0)
 				THEN 1
+			WHEN $2 IS TRUE AND CURRENT_TIMESTAMP >= fc_next_training_dt
+				THEN COALESCE(fc_trainings_num, 0) - $4 + 1
+			WHEN $2 IS TRUE
+				THEN COALESCE(fc_trainings_num, 0) - $4
 			ELSE
 				fc_trainings_num
 		END
 	`
 	fc_next_training_dt := `
 		CASE
-			WHEN $2 IS TRUE AND fc_next_training_dt IS NOT NULL AND CURRENT_TIMESTAMP >= fc_next_training_dt
-				THEN CURRENT_TIMESTAMP + (interval '1 minute' * 180 * power(3, COALESCE(fc_trainings_num, 0)))
-			WHEN $2 IS TRUE AND fc_next_training_dt IS NULL
+			WHEN $2 IS TRUE AND (fc_next_training_dt IS NULL OR $4 = -1 OR COALESCE(fc_trainings_num, 0) - $4 <= 0)
 				THEN CURRENT_TIMESTAMP + (interval '1 minute' * 180)
+			WHEN $2 IS TRUE AND CURRENT_TIMESTAMP >= fc_next_training_dt
+				THEN CURRENT_TIMESTAMP + (interval '1 minute' * 180 * power(3, COALESCE(fc_trainings_num, 0) - $4))
+			WHEN $2 IS TRUE
+				THEN CURRENT_TIMESTAMP + (interval '1 minute' * 180 * power(3, COALESCE(fc_trainings_num, 0) - $4 - 1))
 			ELSE
 				fc_next_training_dt
 		END
@@ -536,7 +540,7 @@ func (r pgRepo) RegistrateWordTraining(wordId, userId int, isAnswerCorrect bool)
 			, ` + fc_next_training_dt + `
 		) WHERE word_id = $1 AND user_id = $3
 	`
-	_, err = conn.Exec(r.ctx, sql, wordId, isAnswerCorrect, userId)
+	_, err = conn.Exec(r.ctx, sql, wordId, isAnswerCorrect, userId, memPercentageDowngrade)
 
 	return err
 }

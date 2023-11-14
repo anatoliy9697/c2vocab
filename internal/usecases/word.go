@@ -12,7 +12,7 @@ func RegistrateWordTraining(r res.Resources, w *wlPkg.Word, userId int, isAnswer
 		return err
 	}
 	if isStatExists {
-		err = r.WLRepo.RegistrateWordTraining(w.Id, userId, isAnswerCorrect)
+		err = r.WLRepo.RegistrateWordTraining(w.Id, userId, isAnswerCorrect, w.MemPercentageDowngrade())
 	} else {
 		err = r.WLRepo.CreateWordStat(w.Id, userId, isAnswerCorrect)
 	}

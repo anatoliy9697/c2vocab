@@ -52,3 +52,17 @@ func (wl *WordList) Deactivate() {
 func (w *Word) Deactivate() {
 	w.Active = false
 }
+
+func (w *Word) MemPercentageDowngrade() int {
+	if w.MemPercentage == 0 {
+		return -1
+	}
+
+	memPercentage := w.MemPercentage
+	dg := 0
+	for ; memPercentage < 50; memPercentage *= 2 {
+		dg++
+	}
+
+	return dg
+}
