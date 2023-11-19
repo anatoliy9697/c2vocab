@@ -10,10 +10,11 @@ import (
 )
 
 type Scheduler struct {
-	MaxTaskHandlers int
-	TaskWaitingTime int // ms
-	TaskBatchSize   int
-	Res             res.Resources
+	MaxTaskHandlers    int
+	TaskWaitingTime    int // ms
+	TaskBatchSize      int
+	MaxTimeForReassign int // s
+	Res                res.Resources
 }
 
 func (s Scheduler) Run(ctx context.Context, done chan struct{}) {
@@ -41,26 +42,31 @@ loop:
 			break loop
 
 		// Handler had finished
-		case handlerCode := <-handlerDone:
+		case handlerCode = <-handlerDone:
 			delete(handlers, handlerCode)
 
 		// Next scheduler iteration
 		case <-ticker.C:
-			if tasks, err = s.Res.TskRepo.Tasks(s.TaskBatchSize); err != nil {
+			if len(handlers) >= s.MaxTaskHandlers {
+				s.Res.Logger.Info("No free task handlers. Waiting for handler")
+				handlerCode = <-handlerDone
+				delete(handlers, handlerCode)
+			}
+
+			handlerCode = uuid.NewString()[:7]
+
+			if tasks, err = s.Res.TskRepo.Tasks("taskHandler-"+handlerCode, s.TaskBatchSize, s.MaxTimeForReassign); err != nil {
 				s.Res.Logger.Error("Scheduler fatal error: " + err.Error())
-				panic(err)
+				panic(err) // TODO: Надо бы сделать отлов паники
 			}
 
 			if len(tasks) > 0 {
-				if len(handlers) >= s.MaxTaskHandlers {
-					s.Res.Logger.Info("No free task handlers. Waiting for handler")
-					handlerCode = <-handlerDone
-					delete(handlers, handlerCode)
-				}
-				handlerCode := uuid.NewString()[:7]
-				// handlers[handlerCode] = struct{}{}
+				handlers[handlerCode] = struct{}{}
 				s.Res.Logger.Info("Running task handler "+handlerCode, "tasks", tasks)
-				// Running task handler
+				go TaskHandler{
+					Code: handlerCode,
+					Res:  s.Res,
+				}.Run(handlerDone, tasks)
 				ticker = haveTaskTicker
 			} else {
 				s.Res.Logger.Debug("No scheduler tasks")

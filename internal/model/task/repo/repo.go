@@ -8,7 +8,7 @@ import (
 )
 
 type Repo interface {
-	Tasks(int) ([]tskPkg.Task, error)
+	Tasks(string, int, int) ([]tskPkg.Task, error)
 }
 
 func Init(c context.Context, p *pgxpool.Pool) Repo {

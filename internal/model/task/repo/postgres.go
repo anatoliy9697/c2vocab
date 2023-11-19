@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"strconv"
 
 	tskPkg "github.com/anatoliy9697/c2vocab/internal/model/task"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -16,7 +17,7 @@ func initPGRepo(c context.Context, p *pgxpool.Pool) *pgRepo {
 	return &pgRepo{c, p}
 }
 
-func (r pgRepo) Tasks(batchSize int) ([]tskPkg.Task, error) {
+func (r pgRepo) Tasks(handlerCode string, batchSize int, maxTimeForReassign int) ([]tskPkg.Task, error) {
 	conn, err := r.pool.Acquire(r.ctx)
 	if err != nil {
 		return nil, err
@@ -24,14 +25,27 @@ func (r pgRepo) Tasks(batchSize int) ([]tskPkg.Task, error) {
 	defer conn.Release()
 
 	sql := `
-		SELECT
+		WITH batch AS (
+			SELECT
+				user_id AS batch_user_id
+				, 'to_main_menu' AS task_type
+			FROM c2v_tg_chat
+			WHERE 
+				(COALESCE(worker, '') = '' OR in_work_from + interval '` + strconv.Itoa(maxTimeForReassign) + ` seconds' <= CURRENT_TIMESTAMP)
+				AND (state_code <> 'main_menu' AND usr_last_act_dt + interval '1 minute' <= CURRENT_TIMESTAMP)
+			LIMIT $2
+		)
+		UPDATE c2v_tg_chat
+		SET
+			worker = $1,
+			in_work_from = CURRENT_TIMESTAMP
+		WHERE
+			user_id IN (SELECT batch_user_id FROM batch)
+		RETURNING
 			user_id
-			, 'to_main_menu' AS  task_type
-		FROM c2v_tg_chat
-		WHERE state_code <> 'main_menu' AND usr_last_act_dt + interval '1 minute' <= CURRENT_TIMESTAMP
-		LIMIT $1
+			, (SELECT task_type FROM batch WHERE batch_user_id = user_id) AS task_type
 	`
-	rows, err := conn.Query(r.ctx, sql, batchSize)
+	rows, err := conn.Query(r.ctx, sql, handlerCode, batchSize)
 	if err != nil {
 		return nil, err
 	}
