@@ -20,7 +20,7 @@ func (eh EventHandler) Run(done chan string, upd *tgbotapi.Update) {
 	var usr *usrPkg.User
 	var tc *tcPkg.Chat
 
-	eh.Res.Logger = eh.Res.Logger.With("handlerCode", eh.Code)
+	eh.Res.Logger = eh.Res.Logger.With("eventHandlerCode", eh.Code)
 
 	defer func() {
 		usecases.ProcessErr(eh.Res, tc, usr, err)

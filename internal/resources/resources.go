@@ -3,6 +3,7 @@ package resources
 import (
 	"log/slog"
 
+	tsk "github.com/anatoliy9697/c2vocab/internal/model/task/repo"
 	tgchat "github.com/anatoliy9697/c2vocab/internal/model/tgchat/repo"
 	usr "github.com/anatoliy9697/c2vocab/internal/model/user/repo"
 	wl "github.com/anatoliy9697/c2vocab/internal/model/wordlist/repo"
@@ -13,6 +14,7 @@ type Resources struct {
 	UsrRepo  usr.Repo
 	TcRepo   tgchat.Repo
 	WLRepo   wl.Repo
+	TskRepo  tsk.Repo
 	TgBotAPI *tgbotapi.BotAPI
 	Logger   *slog.Logger
 }

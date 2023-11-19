@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/anatoliy9697/c2vocab/internal/control"
+	tskRepo "github.com/anatoliy9697/c2vocab/internal/model/task/repo"
 	tcRepo "github.com/anatoliy9697/c2vocab/internal/model/tgchat/repo"
 	usrRepo "github.com/anatoliy9697/c2vocab/internal/model/user/repo"
 	wlRepo "github.com/anatoliy9697/c2vocab/internal/model/wordlist/repo"
@@ -54,7 +55,7 @@ func main() {
 	}
 	// tgBotAPI.Debug = true
 
-	// Event fetcher (ef) configurating and running
+	// Other resources initialization
 	var tgchatRepo tcRepo.Repo
 	if tgchatRepo, err = tcRepo.Init(mainCtx, pgPool); err != nil {
 		return
@@ -63,17 +64,27 @@ func main() {
 		UsrRepo:  usrRepo.Init(mainCtx, pgPool),
 		TcRepo:   tgchatRepo,
 		WLRepo:   wlRepo.Init(mainCtx, pgPool),
+		TskRepo:  tskRepo.Init(mainCtx, pgPool),
 		TgBotAPI: tgBotAPI,
 		Logger:   logger,
 	}
-	efDone := make(chan struct{})
+	goroutinesDone := make(chan struct{}, 2)
+
+	// Event fetcher (ef) configurating and running
 	go control.EventFetcher{
-		TgBotUpdsOffset:       viper.GetInt("tg_bot_upds_offset"),
-		TgBotUpdsTimeout:      viper.GetInt("tg_bot_upds_timeout"),
-		MaxEventHandlers:      viper.GetInt("max_event_handlers"),
-		WaitForHandlerTimeout: viper.GetInt("wait_for_handler_timeout"),
-		Res:                   res,
-	}.Run(mainCtx, efDone)
+		TgBotUpdsOffset:  viper.GetInt("tg_bot_upds_offset"),
+		TgBotUpdsTimeout: viper.GetInt("tg_bot_upds_timeout"),
+		MaxEventHandlers: viper.GetInt("max_event_handlers"),
+		Res:              res,
+	}.Run(mainCtx, goroutinesDone)
+
+	// Scheduler configurating and running
+	go control.Scheduler{
+		MaxTaskHandlers: viper.GetInt("max_tack_handlers"),
+		TaskWaitingTime: viper.GetInt("task_waiting_time"),
+		TaskBatchSize:   viper.GetInt("task_batch_size"),
+		Res:             res,
+	}.Run(mainCtx, goroutinesDone)
 
 	logger.Info("C2Vocab is running")
 
@@ -82,8 +93,9 @@ func main() {
 
 	logger.Info("Shutdown initialized. Waiting for all subsidiary goroutines finishing")
 
-	// Waiting for event fetcher completion
-	<-efDone
+	// Waiting for event fetcher and scheduler completion
+	<-goroutinesDone
+	<-goroutinesDone
 
 	logger.Info("C2Vocab execution completed")
 }
