@@ -8,7 +8,8 @@ import (
 )
 
 type Repo interface {
-	Tasks(string, int, int) ([]tskPkg.Task, error)
+	TasksWithLocking(string, int, int) ([]tskPkg.Task, error)
+	UnlockTaskByUserId(int) error
 }
 
 func Init(c context.Context, p *pgxpool.Pool) Repo {

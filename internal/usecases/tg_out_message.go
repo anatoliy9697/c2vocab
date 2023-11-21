@@ -6,7 +6,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func TgOutMsg(r res.Resources, tc *tcPkg.Chat, errText string) (msg tgbotapi.MessageConfig, err error) {
+func OutMsg(r res.Resources, tc *tcPkg.Chat, errText string) (msg tgbotapi.MessageConfig, err error) {
 	var msgText string
 	if msgText, err = tc.OutMsgText(errText); err != nil {
 		return msg, err
@@ -25,7 +25,7 @@ func TgOutMsg(r res.Resources, tc *tcPkg.Chat, errText string) (msg tgbotapi.Mes
 	return msg, nil
 }
 
-func TgMsgEditing(r res.Resources, tc *tcPkg.Chat, errText string) (editMsgConfig tgbotapi.EditMessageTextConfig, err error) {
+func LastMsgEditing(r res.Resources, tc *tcPkg.Chat, errText string) (editMsgConfig tgbotapi.EditMessageTextConfig, err error) {
 	var msgText string
 	if msgText, err = tc.OutMsgText(errText); err != nil {
 		return editMsgConfig, err
@@ -44,20 +44,15 @@ func TgMsgEditing(r res.Resources, tc *tcPkg.Chat, errText string) (editMsgConfi
 
 func SendReplyMsg(r res.Resources, tc *tcPkg.Chat, errText string) (err error) {
 	var msg tgbotapi.Chattable
-	if msg, err = TgOutMsg(r, tc, errText); err != nil {
+	if msg, err = OutMsg(r, tc, errText); err != nil {
 		return err
 	}
 
 	r.Logger.Info("Sending reply message", "replyMsg", msg)
 
 	var msgInTg tgbotapi.Message
-	if msgInTg, err = r.TgBotAPI.Send(msg); err != nil && tc.BotLastMsgId != 0 {
-		if msg, err = TgOutMsg(r, tc, errText); err != nil {
-			return err
-		}
-		if msgInTg, err = r.TgBotAPI.Send(msg); err != nil {
-			return err
-		}
+	if msgInTg, err = r.TgBotAPI.Send(msg); err != nil {
+		return err
 	}
 
 	if tc.BotLastMsgId != 0 {
@@ -65,6 +60,21 @@ func SendReplyMsg(r res.Resources, tc *tcPkg.Chat, errText string) (err error) {
 	}
 
 	tc.SetBotLastMsgId(msgInTg.MessageID)
+
+	return nil
+}
+
+func EditLastMsg(r res.Resources, tc *tcPkg.Chat, errText string) (err error) {
+	var msg tgbotapi.Chattable
+	if msg, err = LastMsgEditing(r, tc, errText); err != nil {
+		return err
+	}
+
+	r.Logger.Info("Sending reply message", "replyMsg", msg)
+
+	if _, err = r.TgBotAPI.Send(msg); err != nil {
+		return err
+	}
 
 	return nil
 }

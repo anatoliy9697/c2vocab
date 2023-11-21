@@ -29,13 +29,13 @@ func (eh EventHandler) Run(done chan string, upd *tgbotapi.Update) {
 	if usr, err = usecases.MapToInnerUserAndSave(eh.Res, upd.SentFrom()); err != nil {
 		return
 	}
-
 	eh.Res.Logger.Debug("User mapped to inner", "user", usr)
+
+	// TODO: тут добавить взятие блокировки чата
 
 	if tc, err = usecases.MapToInnerTgChatAndSave(eh.Res, upd.FromChat(), usr); err != nil {
 		return
 	}
-
 	eh.Res.Logger.Debug("TgChat mapped to inner", "tgChat", tc)
 
 	// Ignore non-message and non-command events
@@ -46,7 +46,6 @@ func (eh EventHandler) Run(done chan string, upd *tgbotapi.Update) {
 	if err = usecases.ProcessUpd(eh.Res, tc, upd); err != nil {
 		return
 	}
-
 	eh.Res.Logger.Debug("Update processed", "tgChat", tc)
 
 	if err = usecases.SendReplyMsg(eh.Res, tc, ""); err != nil {
@@ -54,7 +53,6 @@ func (eh EventHandler) Run(done chan string, upd *tgbotapi.Update) {
 	}
 
 	eh.Res.Logger.Info("TgChat updating in DB", "tgChat", tc)
-
 	if err = eh.Res.TcRepo.UpdateTgChat(tc, true); err != nil {
 		return
 	}

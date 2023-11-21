@@ -11,6 +11,7 @@ type Repo interface {
 	IsExists(*usrPkg.User) (bool, error)
 	SaveNew(*usrPkg.User) error
 	Update(*usrPkg.User) error
+	ById(int) (*usrPkg.User, error)
 }
 
 func Init(c context.Context, p *pgxpool.Pool) Repo {

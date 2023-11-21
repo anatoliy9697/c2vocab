@@ -55,7 +55,7 @@ loop:
 
 			handlerCode = uuid.NewString()[:7]
 
-			if tasks, err = s.Res.TskRepo.Tasks("taskHandler-"+handlerCode, s.TaskBatchSize, s.MaxTimeForReassign); err != nil {
+			if tasks, err = s.Res.TskRepo.TasksWithLocking("taskHandler-"+handlerCode, s.TaskBatchSize, s.MaxTimeForReassign); err != nil {
 				s.Res.Logger.Error("Scheduler fatal error: " + err.Error())
 				panic(err) // TODO: Надо бы сделать отлов паники
 			}

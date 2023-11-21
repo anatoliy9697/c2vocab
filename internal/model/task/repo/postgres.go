@@ -17,7 +17,7 @@ func initPGRepo(c context.Context, p *pgxpool.Pool) *pgRepo {
 	return &pgRepo{c, p}
 }
 
-func (r pgRepo) Tasks(handlerCode string, batchSize int, maxTimeForReassign int) ([]tskPkg.Task, error) {
+func (r pgRepo) TasksWithLocking(handlerCode string, batchSize int, maxTimeForReassign int) ([]tskPkg.Task, error) {
 	conn, err := r.pool.Acquire(r.ctx)
 	if err != nil {
 		return nil, err
@@ -32,7 +32,7 @@ func (r pgRepo) Tasks(handlerCode string, batchSize int, maxTimeForReassign int)
 			FROM c2v_tg_chat
 			WHERE 
 				(COALESCE(worker, '') = '' OR in_work_from + interval '` + strconv.Itoa(maxTimeForReassign) + ` seconds' <= CURRENT_TIMESTAMP)
-				AND (state_code <> 'main_menu' AND usr_last_act_dt + interval '1 minute' <= CURRENT_TIMESTAMP)
+				AND (state_code <> 'main_menu' AND usr_last_act_dt + interval '10 minutes' <= CURRENT_TIMESTAMP)
 			LIMIT $2
 		)
 		UPDATE c2v_tg_chat
@@ -64,4 +64,24 @@ func (r pgRepo) Tasks(handlerCode string, batchSize int, maxTimeForReassign int)
 	}
 
 	return tasks, nil
+}
+
+func (r pgRepo) UnlockTaskByUserId(userId int) (err error) {
+	var conn *pgxpool.Conn
+	if conn, err = r.pool.Acquire(r.ctx); err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	sql := `
+		UPDATE c2v_tg_chat
+		SET
+			worker = NULL,
+			in_work_from = NULL
+		WHERE
+			user_id = $1
+	`
+	_, err = conn.Exec(r.ctx, sql, userId)
+
+	return err
 }
