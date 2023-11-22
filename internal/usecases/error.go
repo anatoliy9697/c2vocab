@@ -26,7 +26,7 @@ func ProcessErr(r res.Resources, tc *tcPkg.Chat, usr *usrPkg.User, err error) {
 		prevBotLastMsgId := tc.BotLastMsgId
 
 		// Getting tgChat without any changes made in RAM
-		tc, _ = r.TcRepo.TgChatByUserId(tc.UserId)
+		tc, _ = r.TcRepo.ChatByUserId(tc.UserId)
 		if tc != nil {
 			tc.User = usr
 
@@ -45,7 +45,7 @@ func ProcessErr(r res.Resources, tc *tcPkg.Chat, usr *usrPkg.User, err error) {
 			// Sending replay message, got by non-changed by current request, tgChat state with error info
 			tc.BotLastMsgId = prevBotLastMsgId
 			SendReplyMsg(r, tc, errText)
-			r.TcRepo.UpdateTgChat(tc, true)
+			r.TcRepo.UpdateChat(tc, true)
 		}
 	}
 }

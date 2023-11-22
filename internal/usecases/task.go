@@ -17,7 +17,7 @@ func HandleTask(r res.Resources, task tskPkg.Task) (err error) {
 
 func HandleReturnToMainMenu(r res.Resources, task tskPkg.Task) (err error) {
 	var tc *tcPkg.Chat
-	if tc, err = r.TcRepo.TgChatByUserId(task.UserId); err != nil {
+	if tc, err = r.TcRepo.ChatByUserId(task.UserId); err != nil {
 		return err
 	}
 
@@ -42,7 +42,7 @@ func HandleReturnToMainMenu(r res.Resources, task tskPkg.Task) (err error) {
 		return err
 	}
 
-	err = r.TcRepo.UpdateTgChat(tc, false)
+	err = r.TcRepo.UpdateChat(tc, false)
 
 	return err
 }

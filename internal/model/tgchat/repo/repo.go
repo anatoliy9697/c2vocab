@@ -8,14 +8,17 @@ import (
 )
 
 type Repo interface {
-	SaveNewTgChat(*tcPkg.Chat) error
+	IsChatExistsByUserId(int) (bool, error)
+	SaveNewChat(*tcPkg.Chat, string) error
 	StartState() (*tcPkg.State, error)
-	TgChatByUserId(int) (*tcPkg.Chat, error)
+	ChatByUserId(int) (*tcPkg.Chat, error)
 	StateByCode(string) (*tcPkg.State, error)
-	UpdateTgChat(*tcPkg.Chat, bool) error
+	UpdateChat(*tcPkg.Chat, bool) error
 	CmdByCode(string) (*tcPkg.Cmd, error)
 	AllExercises() []*tcPkg.Excersice
 	ExcersiceByCode(string) (*tcPkg.Excersice, error)
+	UnlockChatByUserId(int) error
+	LockChatByUserId(int, string, int, int, int) error
 }
 
 func Init(c context.Context, p *pgxpool.Pool) (Repo, error) {

@@ -10,21 +10,28 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func MapToInnerTgChatAndSave(r res.Resources, outerTC *tgbotapi.Chat, u *usrPkg.User) (tc *tcPkg.Chat, err error) {
-	if tc, err = r.TcRepo.TgChatByUserId(u.Id); err != nil {
+func MapToInnerTgChatAndSaveWithLocking(r res.Resources, outerTC *tgbotapi.Chat, u *usrPkg.User, handlerCode string) (tc *tcPkg.Chat, err error) {
+	var chatExists bool
+	if chatExists, err = r.TcRepo.IsChatExistsByUserId(u.Id); err != nil {
 		return nil, err
 	}
 
-	if tc == nil {
+	if chatExists {
+		if err = r.TcRepo.LockChatByUserId(u.Id, handlerCode, r.LockConf.TimeForReassign, r.LockConf.AttemptsAmount, r.LockConf.TimeForNextAttempt); err != nil {
+			return nil, err
+		}
+		tc, err = r.TcRepo.ChatByUserId(u.Id)
+	} else {
 		state, _ := r.TcRepo.StartState()
 		tc = &tcPkg.Chat{
 			TgId:   int(outerTC.ID),
 			UserId: u.Id,
 			State:  state,
 		}
-		if err = r.TcRepo.SaveNewTgChat(tc); err != nil {
-			return nil, err
-		}
+		err = r.TcRepo.SaveNewChat(tc, handlerCode)
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	tc.User = u
@@ -85,4 +92,13 @@ func SetTgChatExerciseNextWord(r res.Resources, tc *tcPkg.Chat) (err error) {
 	}
 
 	return nil
+}
+
+func UnlockTgChat(r res.Resources, u *usrPkg.User) {
+	if u != nil {
+		if err := r.TcRepo.UnlockChatByUserId(u.Id); err != nil {
+			r.Logger.Error(err.Error())
+		}
+		r.Logger.Debug("TgChat unlocked")
+	}
 }

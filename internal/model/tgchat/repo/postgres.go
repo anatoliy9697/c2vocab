@@ -3,6 +3,8 @@ package repo
 import (
 	"context"
 	"errors"
+	"strconv"
+	"time"
 
 	"github.com/anatoliy9697/c2vocab/internal/model/commons"
 	tcPkg "github.com/anatoliy9697/c2vocab/internal/model/tgchat"
@@ -27,7 +29,32 @@ func initPGRepo(c context.Context, p *pgxpool.Pool) (*pgRepo, error) {
 	return &pgRepo{c, p}, nil
 }
 
-func (r pgRepo) SaveNewTgChat(tc *tcPkg.Chat) error {
+func (r pgRepo) IsChatExistsByUserId(userId int) (bool, error) {
+	conn, err := r.p.Acquire(r.c)
+	if err != nil {
+		return false, err
+	}
+	defer conn.Release()
+
+	sql := `
+		SELECT COUNT(*)
+		FROM c2v_tg_chat
+		WHERE user_id = $1
+	`
+	var count int
+	err = conn.QueryRow(r.c, sql, userId).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+
+	if count > 0 {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func (r pgRepo) SaveNewChat(tc *tcPkg.Chat, handlerCode string) error {
 	conn, err := r.p.Acquire(r.c)
 	if err != nil {
 		return err
@@ -35,13 +62,14 @@ func (r pgRepo) SaveNewTgChat(tc *tcPkg.Chat) error {
 	defer conn.Release()
 
 	sql := `
-		INSERT INTO c2v_tg_chat(tg_id, user_id, state_code, usr_last_act_dt, created_at)
-		VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		INSERT INTO c2v_tg_chat(tg_id, user_id, state_code, usr_last_act_dt, created_at, worker, in_work_from)
+		VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4, CURRENT_TIMESTAMP)
 	`
 	_, err = conn.Exec(r.c, sql,
 		tc.TgId,
 		tc.UserId,
 		tc.State.Code,
+		handlerCode,
 	)
 	if err != nil {
 		return err
@@ -50,7 +78,7 @@ func (r pgRepo) SaveNewTgChat(tc *tcPkg.Chat) error {
 	return nil
 }
 
-func (r pgRepo) TgChatByUserId(usrId int) (*tcPkg.Chat, error) {
+func (r pgRepo) ChatByUserId(usrId int) (*tcPkg.Chat, error) {
 	conn, err := r.p.Acquire(r.c)
 	if err != nil {
 		return nil, err
@@ -113,7 +141,7 @@ func (r pgRepo) TgChatByUserId(usrId int) (*tcPkg.Chat, error) {
 	}, nil
 }
 
-func (r pgRepo) UpdateTgChat(tc *tcPkg.Chat, usrActivity bool) error {
+func (r pgRepo) UpdateChat(tc *tcPkg.Chat, usrActivity bool) error {
 	conn, err := r.p.Acquire(r.c)
 	if err != nil {
 		return err
@@ -174,4 +202,65 @@ func (r pgRepo) UpdateTgChat(tc *tcPkg.Chat, usrActivity bool) error {
 	}
 
 	return nil
+}
+
+func (r pgRepo) UnlockChatByUserId(userId int) (err error) {
+	var conn *pgxpool.Conn
+	if conn, err = r.p.Acquire(r.c); err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	sql := `
+		UPDATE c2v_tg_chat
+		SET
+			worker = NULL,
+			in_work_from = NULL
+		WHERE
+			user_id = $1
+	`
+	_, err = conn.Exec(r.c, sql, userId)
+
+	return err
+}
+
+func (r pgRepo) LockChatByUserId(userId int, handlerCode string, timeForReassign int, lockAttemptsAmount int, timeForNextLockAttempt int) (err error) {
+	var conn *pgxpool.Conn
+	if conn, err = r.p.Acquire(r.c); err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	var locked bool
+	sql := `
+		UPDATE c2v_tg_chat
+		SET
+			worker = CASE
+				WHEN worker IS NULL OR in_work_from + interval '` + strconv.Itoa(timeForReassign) + ` seconds' <= CURRENT_TIMESTAMP
+				THEN $1
+				ELSE worker
+			END
+			, in_work_from = CASE
+				WHEN worker IS NULL OR in_work_from + interval '` + strconv.Itoa(timeForReassign) + ` seconds' <= CURRENT_TIMESTAMP
+				THEN CURRENT_TIMESTAMP
+				ELSE in_work_from
+			END
+		WHERE
+			user_id = $2
+		RETURNING
+			CASE
+				WHEN worker = $1 THEN true ELSE false 
+			END
+	`
+	for lockAttemptsCount := 1; lockAttemptsCount <= lockAttemptsAmount; lockAttemptsCount++ {
+		if err = conn.QueryRow(r.c, sql, handlerCode, userId).Scan(&locked); err != nil {
+			return err
+		}
+		if locked {
+			return nil
+		}
+		time.Sleep(time.Duration(timeForNextLockAttempt) * time.Millisecond)
+	}
+
+	return errors.New("lock attempts limit reached")
 }

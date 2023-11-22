@@ -24,6 +24,7 @@ func (eh EventHandler) Run(done chan string, upd *tgbotapi.Update) {
 
 	defer func() {
 		usecases.ProcessErr(eh.Res, tc, usr, err)
+		usecases.UnlockTgChat(eh.Res, usr)
 	}()
 
 	if usr, err = usecases.MapToInnerUserAndSave(eh.Res, upd.SentFrom()); err != nil {
@@ -31,12 +32,10 @@ func (eh EventHandler) Run(done chan string, upd *tgbotapi.Update) {
 	}
 	eh.Res.Logger.Debug("User mapped to inner", "user", usr)
 
-	// TODO: тут добавить взятие блокировки чата
-
-	if tc, err = usecases.MapToInnerTgChatAndSave(eh.Res, upd.FromChat(), usr); err != nil {
+	if tc, err = usecases.MapToInnerTgChatAndSaveWithLocking(eh.Res, upd.FromChat(), usr, "eventHandler-"+eh.Code); err != nil {
 		return
 	}
-	eh.Res.Logger.Debug("TgChat mapped to inner", "tgChat", tc)
+	eh.Res.Logger.Debug("TgChat mapped to inner and locked", "tgChat", tc)
 
 	// Ignore non-message and non-command events
 	if upd.Message == nil && upd.CallbackQuery == nil {
@@ -53,7 +52,7 @@ func (eh EventHandler) Run(done chan string, upd *tgbotapi.Update) {
 	}
 
 	eh.Res.Logger.Info("TgChat updating in DB", "tgChat", tc)
-	if err = eh.Res.TcRepo.UpdateTgChat(tc, true); err != nil {
+	if err = eh.Res.TcRepo.UpdateChat(tc, true); err != nil {
 		return
 	}
 }

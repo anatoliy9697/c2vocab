@@ -10,6 +10,12 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+type LockConfig struct {
+	AttemptsAmount     int
+	TimeForNextAttempt int // ms
+	TimeForReassign    int // ms
+}
+
 type Resources struct {
 	UsrRepo  usr.Repo
 	TcRepo   tgchat.Repo
@@ -17,4 +23,5 @@ type Resources struct {
 	TskRepo  tsk.Repo
 	TgBotAPI *tgbotapi.BotAPI
 	Logger   *slog.Logger
+	LockConf LockConfig
 }

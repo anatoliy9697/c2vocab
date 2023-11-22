@@ -67,6 +67,11 @@ func main() {
 		TskRepo:  tskRepo.Init(mainCtx, pgPool),
 		TgBotAPI: tgBotAPI,
 		Logger:   logger,
+		LockConf: res.LockConfig{
+			AttemptsAmount:     viper.GetInt("lock_attempts_amount"),
+			TimeForNextAttempt: viper.GetInt("time_for_next_lock_attempt"),
+			TimeForReassign:    viper.GetInt("time_for_reassign"),
+		},
 	}
 	goroutinesDone := make(chan struct{}, 2)
 
@@ -80,11 +85,10 @@ func main() {
 
 	// Scheduler configurating and running
 	go control.Scheduler{
-		MaxTaskHandlers:    viper.GetInt("max_tack_handlers"),
-		TaskWaitingTime:    viper.GetInt("task_waiting_time"),
-		TaskBatchSize:      viper.GetInt("task_batch_size"),
-		MaxTimeForReassign: viper.GetInt("max_time_for_reassign"),
-		Res:                res,
+		MaxTaskHandlers: viper.GetInt("max_task_handlers"),
+		TaskWaitingTime: viper.GetInt("task_waiting_time"),
+		TaskBatchSize:   viper.GetInt("task_batch_size"),
+		Res:             res,
 	}.Run(mainCtx, goroutinesDone)
 
 	logger.Info("C2Vocab is running")

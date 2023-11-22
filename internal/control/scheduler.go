@@ -10,11 +10,10 @@ import (
 )
 
 type Scheduler struct {
-	MaxTaskHandlers    int
-	TaskWaitingTime    int // ms
-	TaskBatchSize      int
-	MaxTimeForReassign int // s
-	Res                res.Resources
+	MaxTaskHandlers int
+	TaskWaitingTime int // ms
+	TaskBatchSize   int
+	Res             res.Resources
 }
 
 func (s Scheduler) Run(ctx context.Context, done chan struct{}) {
@@ -55,7 +54,7 @@ loop:
 
 			handlerCode = uuid.NewString()[:7]
 
-			if tasks, err = s.Res.TskRepo.TasksWithLocking("taskHandler-"+handlerCode, s.TaskBatchSize, s.MaxTimeForReassign); err != nil {
+			if tasks, err = s.Res.TskRepo.TasksWithLocking("taskHandler-"+handlerCode, s.TaskBatchSize, s.Res.LockConf.TimeForReassign); err != nil {
 				s.Res.Logger.Error("Scheduler fatal error: " + err.Error())
 				panic(err) // TODO: Надо бы сделать отлов паники
 			}

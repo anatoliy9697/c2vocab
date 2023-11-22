@@ -25,7 +25,7 @@ func (th TaskHandler) Run(done chan string, tasks []tskPkg.Task) {
 		}
 
 		th.Res.Logger.Debug("Unlocking task", "task", task)
-		if err = th.Res.TskRepo.UnlockTaskByUserId(task.UserId); err != nil {
+		if err = th.Res.TcRepo.UnlockChatByUserId(task.UserId); err != nil {
 			th.Res.Logger.Error(err.Error())
 		}
 
