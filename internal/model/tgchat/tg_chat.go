@@ -2,6 +2,7 @@ package tgchat
 
 import (
 	"bytes"
+	"fmt"
 	"regexp"
 	"strconv"
 	"text/template"
@@ -23,12 +24,13 @@ type Chat struct {
 	WL              *wlPkg.WordList `json:"wl"`
 	WordFrgn        string          `json:"wordFrgn"`
 	WordId          int             `json:"wordId"`
-	Word            *wlPkg.Word     `json:"word"`
+	Word            *wlPkg.Word     `json:"word"` // TODO: надо бы перейти на использование поля Words повсеместно
 	ExcersiceCode   string          `json:"excersiceCode"`
 	Excersice       *Excersice      `json:"excersice"`
 	TrainedWordsIds string          `json:"trainedWordsIds"`
 	PrevTaskResult  string          `json:"prevTaskReult"`
 	BotLastMsgId    int             `json:"botLastMsgId"`
+	Words           []*wlPkg.Word   `json:"words"`
 }
 
 type State struct {
@@ -90,6 +92,7 @@ type outMsgTmplArgs struct {
 	PrevTaskResult    string
 	WordMemPercentage int
 	WLMemPercentage   int
+	WordSearchResult  string
 }
 
 var (
@@ -115,6 +118,10 @@ func (tc *Chat) SetState(s *State) {
 
 func (tc *Chat) SetBotLastMsgId(msgId int) {
 	tc.BotLastMsgId = msgId
+}
+
+func (tc *Chat) SetWords(words []*wlPkg.Word) {
+	tc.Words = words
 }
 
 func (tc *Chat) OutMsgArgs(tmpl string, errText string) (args *outMsgTmplArgs, err error) {
@@ -157,6 +164,8 @@ func (tc *Chat) OutMsgArgs(tmpl string, errText string) (args *outMsgTmplArgs, e
 				args.WordMemPercentage = tc.Word.MemPercentage
 			case "WLMemPercentage":
 				args.WLMemPercentage = tc.WL.MemPercentage
+			case "WordSearchResult":
+				args.WordSearchResult = tc.WordSearchResultText()
 			}
 		}
 	}
@@ -198,6 +207,19 @@ func (tc *Chat) ExcersiceTaskText() (string, error) {
 	}
 
 	return buf.String(), nil
+}
+
+func (tc *Chat) WordSearchResultText() string {
+	if len(tc.Words) == 0 {
+		return "Не удалось ничего найти"
+	}
+
+	text := ""
+	for i, w := range tc.Words {
+		text += fmt.Sprintf("%d. %s - %s (%s)\n", (i + 1), w.Foreign, w.Native, w.WLName)
+	}
+
+	return text
 }
 
 func (tc *Chat) IsWaitForDataInput() bool {

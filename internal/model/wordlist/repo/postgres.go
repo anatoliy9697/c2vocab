@@ -544,3 +544,58 @@ func (r pgRepo) RegistrateWordTraining(wordId, userId int, isAnswerCorrect bool,
 
 	return err
 }
+
+func (r pgRepo) SearchUserWord(query string, userId int) ([]*wlPkg.Word, error) {
+	conn, err := r.pool.Acquire(r.ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	sql := `
+		SELECT
+			w.id
+			, w.frgn
+			, w.ntv
+			, w.wl_id
+			, wl.name
+			, w.created_at
+		FROM c2v_word w
+		JOIN c2v_word_list wl ON w.wl_id = wl.id
+		WHERE
+			wl.active IS TRUE
+			AND wl.owner_id = $1
+			AND w.active IS TRUE
+			AND (
+				LOWER(w.frgn) LIKE ('%' || LOWER($2) || '%') 
+				OR LOWER(w.ntv) LIKE ('%' || LOWER($2) || '%')
+			)
+	`
+	rows, err := conn.Query(r.ctx, sql, userId, query)
+	if err != nil {
+		return nil, err
+	}
+
+	words := make([]*wlPkg.Word, 0)
+	var (
+		id, wlId          int
+		frgn, ntv, wlName string
+		createdAt         time.Time
+	)
+	for rows.Next() {
+		if err = rows.Scan(&id, &frgn, &ntv, &wlId, &wlName, &createdAt); err != nil {
+			return nil, err
+		}
+		words = append(words, &wlPkg.Word{
+			Id:        id,
+			Active:    true,
+			Foreign:   frgn,
+			Native:    ntv,
+			WLId:      wlId,
+			WLName:    wlName,
+			CreatedAt: createdAt,
+		})
+	}
+
+	return words, nil
+}

@@ -28,6 +28,7 @@ type Word struct {
 	Native        string    `json:"native"`
 	MemPercentage int       `json:"memPercentage"`
 	WLId          int       `json:"wlId"`
+	WLName        string    `json:"wlName"`
 	CreatedAt     time.Time `json:"createdAt"`
 }
 

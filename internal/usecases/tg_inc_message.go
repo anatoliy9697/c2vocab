@@ -129,6 +129,12 @@ func ProcessIncMsg(r res.Resources, tc *tcPkg.Chat, msg *tcPkg.IncMsg) (err erro
 			return err
 		}
 
+	// Search
+	case msg.Text != "" && tc.State.Code == "w_srch":
+		if err = ProcessWordSearchDataInput(r, tc, msg.Text); err != nil {
+			return err
+		}
+
 	default:
 
 	}

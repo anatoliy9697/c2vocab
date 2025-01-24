@@ -21,6 +21,7 @@ type Repo interface {
 	IsWordStatExists(int, int) (bool, error)
 	CreateWordStat(int, int, bool) error
 	RegistrateWordTraining(int, int, bool, int) error
+	SearchUserWord(string, int) ([]*wlPkg.Word, error)
 }
 
 func Init(c context.Context, p *pgxpool.Pool) Repo {

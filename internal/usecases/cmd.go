@@ -18,6 +18,7 @@ func ClearTgChaTmpFields(tc *tcPkg.Chat) {
 	ClearWordCreationFields(tc)
 	ClearWordFields(tc)
 	ClearExerciseFields(tc)
+	// tc.Words = nil // Пока нет смысла очищать, т.к. все равно в ДБ не сохраняется
 }
 
 func SetTgChatWLFrgnLang(tc *tcPkg.Chat, langCode string) {
@@ -211,6 +212,20 @@ func ProcessUserTaskAnswer(r res.Resources, tc *tcPkg.Chat, usrAnswer string) (e
 	tc.AddTrainedWordId(tc.WordId)
 
 	SetTgChatExerciseNextWord(r, tc)
+
+	return nil
+}
+
+func ProcessWordSearchDataInput(r res.Resources, tc *tcPkg.Chat, query string) error {
+	var (
+		words []*wlPkg.Word
+		err   error
+	)
+	if words, err = r.WLRepo.SearchUserWord(query, tc.UserId); err != nil {
+		return err
+	}
+
+	tc.SetWords(words)
 
 	return nil
 }

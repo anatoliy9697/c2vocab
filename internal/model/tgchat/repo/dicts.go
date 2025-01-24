@@ -11,6 +11,7 @@ var cmds = map[string]*tcPkg.Cmd{
 	"back_to_all_wl": {Code: "back_to_all_wl", DisplayLabel: "⬅️ Назад", DestStateCode: "all_wl"},
 	"back_to_wl":     {Code: "back_to_wl", DisplayLabel: "⬅️ Назад", DestStateCode: "wl"},
 	"back_to_all_w":  {Code: "back_to_all_w", DisplayLabel: "⬅️ Назад", DestStateCode: "all_w"},
+	"back_to_w_srch": {Code: "back_to_w_srch", DisplayLabel: "⬅️ Назад", DestStateCode: "w_srch"},
 	"finish_xrcs":    {Code: "finish_xrcs", DisplayLabel: "🏁 Закончить", DestStateCode: "wl"},
 
 	// Word list
@@ -40,12 +41,15 @@ var cmds = map[string]*tcPkg.Cmd{
 	"learn_wl": {Code: "learn_wl", DisplayLabel: "🧠 Учить", DestStateCode: "all_exercises", NotEmptyWLOnly: true},
 	"xrcs":     {Code: "xrcs", DestStateCode: "xrcs"},
 	"ans":      {Code: "ans"},
+
+	// Search
+	"w_srch": {Code: "w_srch", DisplayLabel: "🔍 Поиск слова", DestStateCode: "w_srch"},
 }
 
 var states = map[string]*tcPkg.State{
 	// Navigation
 	"start":     {Code: "start", AvailCmds: [][]*tcPkg.Cmd{{cmds["start"]}}},
-	"main_menu": {Code: "main_menu", MsgHdr: "Главное меню", MsgBody: "Привет, {{.UsrTgFName}} {{.UsrTgLName}}!", AvailCmds: [][]*tcPkg.Cmd{{cmds["create_wl"], cmds["all_wl"]}}},
+	"main_menu": {Code: "main_menu", MsgHdr: "Главное меню", MsgBody: "Привет, {{.UsrTgFName}} {{.UsrTgLName}}!", AvailCmds: [][]*tcPkg.Cmd{{cmds["create_wl"], cmds["all_wl"]}, {cmds["w_srch"]}}},
 
 	// Word list
 	"wl":                    {Code: "wl", MsgHdr: "Список слов \"{{.WLName}}\"", MsgBody: "Изучаемый язык: {{.WLFrgnLang}}\nБазовый язык: {{.WLNtvLang}}\n\nВсего слов: {{.WordsNum}} шт.\nПроцент усвоения: {{.WLMemPercentage}}%", AvailCmds: [][]*tcPkg.Cmd{{cmds["learn_wl"]}, {cmds["all_w"]}, {cmds["add_w"]}, {cmds["delete_wl"], cmds["edit_wl"]}, {cmds["back_to_all_wl"]}, {cmds["to_main_menu"]}}},
@@ -69,10 +73,16 @@ var states = map[string]*tcPkg.State{
 	"all_exercises": {Code: "all_exercises", MsgHdr: "Изучение списка слов \"{{.WLName}}\"", MsgBody: "Выберите упражнение", Cmd: cmds["xrcs"], AvailCmds: [][]*tcPkg.Cmd{{cmds["back_to_wl"]}, {cmds["to_main_menu"]}}},
 	"xrcs":          {Code: "xrcs", MsgBody: "{{.ExerciseTaskText}}", AvailCmds: [][]*tcPkg.Cmd{{cmds["finish_xrcs"]}}},
 	"xrcs_finish":   {Code: "xrcs_finish", MsgBody: "{{.PrevTaskResult}}На этом пока все! :)", AvailCmds: [][]*tcPkg.Cmd{{cmds["finish_xrcs"]}, {cmds["to_main_menu"]}}},
+
+	// Search
+	"w_srch":      {Code: "w_srch", MsgHdr: "Поиск слова в словаре", MsgBody: "Введите часть слова на любом язык, либо слово целиком", WaitForDataInput: true, NextStateCode: "w_srch_rslt", AvailCmds: [][]*tcPkg.Cmd{{cmds["to_main_menu"]}}},
+	"w_srch_rslt": {Code: "w_srch_rslt", MsgHdr: "Поиск слова в словаре", MsgBody: "{{.WordSearchResult}}", AvailCmds: [][]*tcPkg.Cmd{{cmds["back_to_w_srch"]}, {cmds["to_main_menu"]}}},
 }
 
 var exercises = map[string]*tcPkg.Excersice{
 	"write_frgn":  {Code: "write_frgn", Name: "Ввод слова", TaskText: "{{.PrevTaskResult}}Введите слово \"{{.WordNative}}\" на изучаемом ({{.WLFrgnLang}}) языке", WaitForDataInput: true},
 	"select_frgn": {Code: "select_frgn", Name: "Выбор слова", TaskText: "{{.PrevTaskResult}}Выберите слово \"{{.WordNative}}\" на изучаемом ({{.WLFrgnLang}}) языке", Cmd: cmds["ans"]},
 	"select_ntv":  {Code: "select_ntv", Name: "Выбор перевода", TaskText: "{{.PrevTaskResult}}Выберите перевод слова \"{{.WordForeign}}\" на базовом ({{.WLNtvLang}}) языке", Cmd: cmds["ans"]},
+
+	// "correlate": {Code: "correlate", Name: "Сопоставление слов", TaskText: "{{.PrevTaskResult}}Соотнесите слова с их переводами{{.CurHalfAns}}", Cmd: cmds["ans"]},
 }
