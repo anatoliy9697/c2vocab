@@ -11,6 +11,8 @@ import (
 	res "github.com/anatoliy9697/c2vocab/internal/resources"
 )
 
+// TODO: тут по идее хорошо бы все прямые обращения к полям сущностей заменить на геттеры и сеттеры
+
 func ClearTgChaTmpFields(tc *tcPkg.Chat) {
 	tc.WLFrgnLang = nil
 	tc.WLNtvLang = nil
@@ -18,7 +20,6 @@ func ClearTgChaTmpFields(tc *tcPkg.Chat) {
 	ClearWordCreationFields(tc)
 	ClearWordFields(tc)
 	ClearExerciseFields(tc)
-	// tc.Words = nil // Пока нет смысла очищать, т.к. все равно в ДБ не сохраняется
 }
 
 func SetTgChatWLFrgnLang(tc *tcPkg.Chat, langCode string) {
@@ -155,6 +156,7 @@ func ClearExerciseFields(tc *tcPkg.Chat) {
 	tc.Excersice = nil
 	tc.WordId = 0
 	tc.Word = nil
+	tc.SetWords(nil)
 	tc.TrainedWordsIds = ""
 }
 

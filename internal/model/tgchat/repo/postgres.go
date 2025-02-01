@@ -165,6 +165,7 @@ func (r pgRepo) UpdateChat(tc *tcPkg.Chat, usrActivity bool) error {
 			, wl_id
 			, word_frgn
 			, word_id
+			, words_ids
 			, exercise_code
 			, trained_words_ids
 			, bot_last_msg_id
@@ -180,6 +181,7 @@ func (r pgRepo) UpdateChat(tc *tcPkg.Chat, usrActivity bool) error {
 			, $9
 			, $10
 			, $11
+			, $12
 		)
 		WHERE user_id = $12
 	`
@@ -192,6 +194,7 @@ func (r pgRepo) UpdateChat(tc *tcPkg.Chat, usrActivity bool) error {
 		tc.WLId,
 		tc.WordFrgn,
 		tc.WordId,
+		tc.WordsIdsStr(),
 		tc.ExcersiceCode,
 		tc.TrainedWordsIds,
 		tc.BotLastMsgId,

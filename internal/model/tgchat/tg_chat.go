@@ -24,13 +24,13 @@ type Chat struct {
 	WL              *wlPkg.WordList `json:"wl"`
 	WordFrgn        string          `json:"wordFrgn"`
 	WordId          int             `json:"wordId"`
-	Word            *wlPkg.Word     `json:"word"` // TODO: надо бы перейти на использование поля Words повсеместно
+	Word            *wlPkg.Word     `json:"word"`
+	Words           []*wlPkg.Word   `json:"words"`
 	ExcersiceCode   string          `json:"excersiceCode"`
 	Excersice       *Excersice      `json:"excersice"`
 	TrainedWordsIds string          `json:"trainedWordsIds"`
 	PrevTaskResult  string          `json:"prevTaskReult"`
 	BotLastMsgId    int             `json:"botLastMsgId"`
-	Words           []*wlPkg.Word   `json:"words"`
 }
 
 type State struct {
@@ -122,6 +122,18 @@ func (tc *Chat) SetBotLastMsgId(msgId int) {
 
 func (tc *Chat) SetWords(words []*wlPkg.Word) {
 	tc.Words = words
+}
+
+func (tc *Chat) WordsIdsStr() (s string) {
+	for i, w := range tc.Words {
+		if i == 0 {
+			s += fmt.Sprintf("%d", w.Id)
+		} else {
+			s += fmt.Sprintf(", %d", w.Id)
+		}
+	}
+
+	return
 }
 
 func (tc *Chat) OutMsgArgs(tmpl string, errText string) (args *outMsgTmplArgs, err error) {
